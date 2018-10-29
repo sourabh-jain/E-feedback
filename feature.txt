@@ -1,0 +1,26 @@
+22) Support new active session name "submitted form" now it is done with ajax.
+21) Analysis pages and result pages are added. 
+20) Now all three pages edit, form, verify are dynamically using single form..
+So changes in one can easily reflect other.
+19) Proper status and current activity shown in admin panel.
+18) table activesessions can track multiple sessions of same user.
+17) Now it has better colouring for tables
+16) Now feedback form table is made attractive with showing n hiding frames.
+      User can fill the feedback form at there ease.
+15) Progress bars added to the feedback form.
+14) Admin panel made with different name, charts added.
+13) Now programme name modified in registration interface which means now sections are properly moved to the database.
+     Also faculty_questions and infrastrastructure questions are added to database and to be made dynamic.
+     Best part is admin panel is created with new theme.
+12) Proper tabbing of login page is now enabled. A user getting error in registration will be shown same registration page again. Also details of all faculties and subject id's added. 
+11) It has feedback_statistics page which has table of students who submitted and who have not submitted the form.
+10) Now only those users can use type as admin , who have admin privileges. A new table named admin created that stores       the username of users who are admins, or are to be given admin privileges.
+9) Now the sessions are removed and it supports $_POST forms instead of sessions. It     is now compatible with firefox
+8) Now the input buttons are genearlized. Better handling, in case if no_of_subjects is more or less than 5.
+    Also there is proper colouring of warning,info and success messages. Details of subject & faculty is now moved to different     file.
+7) Properly grouped JavaScript files in js folder, and CSS in css folder. Interactive Submit Button. Also TimerLimit in Submit         Buttons.  Also now the informations of subject_code,subject_id and faculty_name comes from database.
+6) New Login Interface with bootstrap support(mobile responsive)
+4) No such changes observerd.
+3) Now has user registration functionality.
+2) Comes with sessions to control login.
+1) Have form filling function, form edit function and form verify function.

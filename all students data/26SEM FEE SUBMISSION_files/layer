@@ -1,0 +1,2637 @@
+
+(function() {
+String.prototype.startsWith = function(str)
+{return (this.match("^"+str)==str)}
+if (!("classList" in document.documentElement) && Object.defineProperty && typeof HTMLElement !== 'undefined') {
+Object.defineProperty(HTMLElement.prototype, 'classList', {
+get: function() {
+var self = this;
+function update(fn) {
+return function(value) {
+var classes = self.className.split(/\s+/),
+index = classes.indexOf(value);
+fn(classes, index, value);
+self.className = classes.join(" ");
+}
+}
+var ret = {
+add: update(function(classes, index, value) {
+~index || classes.push(value);
+}),
+remove: update(function(classes, index) {
+~index && classes.splice(index, 1);
+}),
+toggle: update(function(classes, index, value) {
+~index ? classes.splice(index, 1) : classes.push(value);
+}),
+contains: function(value) {
+return !!~self.className.split(/\s+/).indexOf(value);
+},
+item: function(i) {
+return self.className.split(/\s+/)[i] || null;
+}
+};
+Object.defineProperty(ret, 'length', {
+get: function() {
+return self.className.split(/\s+/).length;
+}
+});
+return ret;
+}
+});
+}
+if (!Array.prototype.indexOf) {
+Array.prototype.indexOf = function (obj, fromIndex) {
+if (fromIndex == null) {
+fromIndex = 0;
+} else if (fromIndex < 0) {
+fromIndex = Math.max(0, this.length + fromIndex);
+}
+for (var i = fromIndex, j = this.length; i < j; i++) {
+if (this[i] === obj)
+return i;
+}
+return -1;
+};
+}
+if (!window.getComputedStyle) {
+window.getComputedStyle = function(el, pseudo) {
+this.el = el;
+this.getPropertyValue = function(prop) {
+var re = /(\-([a-z]){1})/g;
+if (prop == 'float') prop = 'styleFloat';
+if (re.test(prop)) {
+prop = prop.replace(re, function () {
+return arguments[2].toUpperCase();
+});
+}
+return el.currentStyle[prop] ? el.currentStyle[prop] : null;
+}
+return this;
+}
+}
+String.prototype.trim = function () {
+return this.replace(/^\s*|\s*$/g, '');
+},
+String.prototype.truncate = function (limit) {
+var bits, i;
+bits = this.split('');
+if (bits.length > limit) {
+for (i = bits.length - 1; i > -1; --i) {
+if (i > limit) {
+bits.length = i;
+}
+else if (' ' === bits[i]) {
+bits.length = i;
+break;
+}
+}
+bits.push('...');
+}
+return bits.join('');
+};
+//(function(){
+if (window.visadd){
+// do nothing_
+} else{
+window.visadd = {};
+}
+
+
+visadd.tracker = {
+host: "",
+trackPrefix : 'track_',
+trackPattern : new RegExp("track_[^\\s]+", "g"),
+track_google: false,
+track_container_type: null,
+track_image_action: null,
+track_url: "//a.visadd.com/action",
+track_url_sid: "//a.visadd.com/action_sid",
+session_id: null,
+PartnerId: null,
+full: false,
+full_track_session: null,
+perform_session: null,
+sessionId: function () {
+if (visadd.tracker.session_id == null){
+var session_id = visadd.utils.getCookie("sessionId");
+if (typeof(session_id) != 'undefined' && session_id != null && session_id != ""){
+visadd.tracker.session_id = session_id;
+} else {
+if (typeof(visadd.tracker.session_id) == 'undefined' || visadd.tracker.session_id == null){
+var now = new Date()
+visadd.tracker.session_id = Math.random() + now.getTime();
+visadd.utils.setCookie("sessionId", visadd.tracker.session_id, null, '/');
+}
+}
+}
+return visadd.tracker.session_id;
+},
+isFullTrackSession: function(){
+if (visadd.tracker.full_track_session == null){
+visadd.tracker.full_track_session = visadd.utils.getCookie("full") == "true";
+}
+return visadd.tracker.full_track_session;
+},
+getOrSetFullTrackSession: function(){
+return false;
+if (visadd.tracker.full_track_session == null){
+var full = visadd.utils.getCookie("full");
+if (full == ""){
+var random_mode = Math.random();
+if (random_mode > 0.96){
+full = "true";
+} else{
+full = "false";
+}
+visadd.utils.setCookie("full", full, null, '/');
+}
+visadd.tracker.full_track_session = full == "true";
+visadd.tracker.full = visadd.tracker.full_track_session;
+}
+return visadd.tracker.full_track_session;
+},
+getOrSetPerformSession: function(){
+return true;
+if (visadd.tracker.perform_session == null){
+var perform_cookie = visadd.utils.getCookie("perform");
+var perform = true;
+if (perform_cookie == ""){
+if (typeof(visadd_demo_mode) == 'undefined' && typeof(visadd_no_ab_test_mode) == 'undefined' && visadd.tracker.getOrSetFullTrackSession()){
+var random_mode = Math.random();
+if (random_mode >= 0.5){
+perform = false;
+}
+}
+visadd.utils.setCookie("perform", perform, null, '/');
+} else {
+perform = perform_cookie == "true";
+}
+visadd.tracker.perform_session = perform;
+}
+return visadd.tracker.perform_session;
+},
+track: function (scenario, data, create_sid) {
+if (typeof(data) == 'undefined'){
+data = '';
+}
+if (typeof(create_sid) == 'undefined'){
+create_sid = false;
+}
+scenario = visadd.tracker.trackPrefix + scenario;
+var fixed_data = "&sid=" + visadd.tracker.sessionId() + "&bt=" + visadd.utils.browser.type() + "&ctxu=" + escape(window.location + '');
+if (typeof(visadd.global_settings) != 'undefined'){
+fixed_data = fixed_data + "&pid=" + visadd.global_settings.sid
+} else {
+if (visadd.tracker.PartnerId != null){
+fixed_data = fixed_data + "&pid=" + visadd.tracker.PartnerId
+}
+}
+if (visadd.tracker.full){
+fixed_data = fixed_data + "&full=true";
+}
+// inorder to know what was the container and the action while the scenario
+if (visadd.tracker.track_container_type != null)
+fixed_data = fixed_data + "&im_cnt=" + visadd.tracker.track_container_type;
+if (visadd.tracker.track_image_action != null)
+fixed_data = fixed_data + "&im_cnt=" + visadd.tracker.track_image_action;
+if (visadd.tracker.track_google && typeof (_gaq) != 'undefined'){
+if (data == '' || data == null || typeof(data) == 'undefined' ){
+data = 'Click';
+}
+_gaq.push(['_trackEvent', scenario, data]);
+}
+var url = visadd.tracker.track_url;
+if (create_sid){
+url = visadd.tracker.track_url_sid;
+}
+if (url && url != '') {
+source = visadd.tracker.host;
+url += "?source=" + escape(source) + "&scenario=" + escape(scenario) + fixed_data + data;
+var script = document.createElement("script");
+script.setAttribute("type", "text/javascript");
+script.setAttribute("src", url);
+script.src = url;
+if (document.body) {
+document.body.appendChild(script);
+}
+}
+},
+track_element_internal: function(element, matches, track_outgoing){
+var classesCombined = "";
+if (matches != null) {
+classesCombined = matches.join("|").replace(visadd.tracker.trackPrefix, "");
+}
+try {
+var href = element.href;
+if (href == null || href == "") {
+href = window.location.href;
+}
+if (classesCombined != "") {
+if (classesCombined.indexOf('#') > 0) {
+var mySplitResult = classesCombined.split("#");
+classesCombined = mySplitResult[0];
+label = mySplitResult[1];
+}
+} else{
+classesCombined = "link"
+}
+var data = 'Click';
+if (track_outgoing){
+should_track = true;
+var dest_url = element.href;
+var linkClass = element.className;
+var linkHostname = element.hostname;
+var host = window.location.host;
+var is_outgoing = (linkHostname != host) ? "true" : "false";
+data = "&ogl=" + is_outgoing + "&durl=" + escape(dest_url);
+}
+visadd.tracker.track(classesCombined, data);
+} catch (e) { }
+return true;
+},
+trackElement: function(element, track_outgoing){
+var linkClass = element.className;
+var linkHostname = element.hostname;
+var host = window.location.host;
+var should_track = false;
+var matches = null;
+if (linkClass != null && typeof(linkClass) != 'undefined'){
+matches = linkClass.match(visadd.tracker.trackPattern);
+// trck only out gooing links
+if (matches != null || linkHostname != host) {
+should_track = true;
+}
+}
+if (typeof(track_outgoing) != 'undefined' && track_outgoing){
+should_track = true;
+}
+if (should_track){
+if (element.addEventListener) {
+element.addEventListener('mousedown', function() {visadd.tracker.track_element_internal(element, matches, track_outgoing)});
+// Bad citizens.
+} else if (element.attachEvent) {
+element.attachEvent('onmousedown', function() {visadd.tracker.track_element_internal(element, matches, track_outgoing)});
+} else{
+element.onmousedown = function() {visadd.tracker.track_element_internal(element, matches, track_outgoing)};
+}
+}
+},
+trackLinks: function(jqElement, track_outgoing) {
+var selector = null;
+if (jqElement == null) {
+var elements = document.getElementsByTagName("a");
+for (var i = elements.length - 1; i >= 0; i--)
+{
+visadd.tracker.trackElement(elements[i], track_outgoing);
+}
+} else {
+selector = jqElement;
+selector.each(function () {
+visadd.tracker.trackElement(this, track_outgoing);
+});
+}
+}
+}
+visadd.utils = {
+keywords_words: null,
+keywords_words_usemeta: true,
+protocol: function(){
+var protocol = "http:";
+if (window.location != null){
+protocol = window.location.protocol;
+if (protocol.indexOf("http") < 0){
+protocol = "http:"
+}
+}
+return protocol;
+},
+isAdultContent: function(){
+return false;
+},
+injectStyle: function(data) {
+var s = document.createElement('style');
+s.setAttribute('type', 'text/css');
+if (s.styleSheet) { s.styleSheet.cssText = data; }
+else {
+var st = document.createTextNode(data);
+s.appendChild(st); }
+if (s) {
+var e_s = document.getElementsByTagName('head');
+if (e_s && e_s.length > 0) {
+if (typeof(document) != 'undefined' && typeof(document.location) != 'undefined' && document.location.host == 'happilyblended.com'){
+e_s = document.getElementsByTagName('style');
+e_s[0].innerHTML = e_s[0].innerHTML + data;
+} else{
+e_s[0].appendChild(s);
+}
+}
+}
+},
+setFrameCode: function(ad_code, format, frame_container, frame, cid, append_container, wrap_code){
+var origin_ad_code = ad_code;
+if (visadd.layer.test_iframe_mode()){
+if (origin_ad_code != null) {
+if (origin_ad_code.indexOf("<sc" + "ript") > -1){
+// set fallback information
+var location_encoded = document.location + "";
+location_encoded = location_encoded.replace(/'/g, " ");
+var ad_code = "<sc" + "rip" + "t type='text/javascr" + "ipt'>" +
+"var va_terms = '';" +
+"var va_keywords = '" + visadd.page.keywords().replace(/'/g, " ") + "';" +
+"var va_sid = '" + visadd.global_settings.sid + "';" +
+"var va_format = '" + format + "';" +
+"var va_cid = 'layer';" +
+"var va_next_tier = 1;" +
+"var va_url = '" + location_encoded +"';" +
+"var va_domain = '" + visadd.page.domain() +"';" +
+"var va_title = '" + document.title.replace(/'/g, " ") +"';" +
+"var va_ref = '" + document.referrer.replace(/'/g, " ") +"';";
+var sub_id = visadd.layer.get_sub_id();
+if (sub_id != ''){
+ad_code = ad_code + "var va_subid = '" + sub_id + "';";
+}
+if (visadd.preload && visadd.preload.search_term_to_use != null){
+ad_code = ad_code + "var va_serach_terms = '" + visadd.preload.search_term_to_use + "';"
+}
+if (visadd.settings.ad_id){
+ad_code = ad_code + "var va_curr_unit_id = '" + visadd.settings.ad_id +"';"
+}
+ad_code = ad_code + "var va_image = true;" +
+"</sc"+"ript>" + origin_ad_code
+ad_code = ad_code.replace(/\$\$va_format\$\$/g, format);
+ad_code = ad_code.replace(/\$\$va_terms\$\$/g, visadd.page.keywords().replace(/'/g, " "));
+if (visadd.preload && visadd.preload.search_term_to_use != null){
+ad_code = ad_code.replace(/\$\$va_search_terms\$\$/g, visadd.preload.search_term_to_use);
+ad_code = ad_code.replace(/%24%24va_search_terms%24%24/g, visadd.preload.search_term_to_use);
+} else{
+ad_code = ad_code.replace(/\$\$va_search_terms\$\$/g, visadd.page.keywords().replace(/'/g, " "));
+ad_code = ad_code.replace(/%24%24va_search_terms%24%24/g, visadd.page.keywords().replace(/'/g, " "));
+}
+ad_code = ad_code.replace(/\$\$va_keywords\$\$/g, visadd.page.keywords().replace(/'/g, " "));
+ad_code = ad_code.replace(/\$\$va_sid\$\$/g, visadd.global_settings.sid);
+ad_code = ad_code.replace(/\$\$va_url\$\$/g, escape(document.location));
+ad_code = ad_code.replace(/\$\$va_domain\$\$/g, escape(visadd.page.domain()));
+ad_code = ad_code.replace(/\$\$va_title\$\$/g, document.title.replace(/'/g, " "));
+ad_code = ad_code.replace(/\$\$va_image\$\$/g, "true");
+ad_code = ad_code.replace(/\$\va_next_tier\$\$/g, "1");
+if (visadd.settings.ad_id){
+ad_code = ad_code.replace(/\$\$va_curr_unit_id\$\$/g, visadd.settings.ad_id);
+} else{
+ad_code = ad_code.replace(/\$\$va_curr_unit_id\$\$/g, "");
+}
+if (wrap_code){
+ad_code = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"><html xmlns=\"http://www.w3.org/1999/xhtml\"><head></head><body style='overflow: hidden;margin: 0px;'>"+ad_code +"</body></html>"
+}
+width = 301;
+height = 250;
+visadd.layer.layer_width = width+10;
+visadd.layer.layer_height = height+39;
+//frame = document.getElementById("visadd_layer_frame")
+if (frame == null){
+frame = document.createElement('iframe');
+frame.className = 'flip_frame';
+frame_container.appendChild(frame);
+}
+visadd.layer.set_iframe(frame, ad_code, width, height);
+} else {
+if (origin_ad_code != null && origin_ad_code.length > 0){
+// = document.getElementById("visadd_layer_frame_c")
+if (origin_ad_code.startsWith(":eval:")){
+origin_ad_code = origin_ad_code.replace(":eval:", "")
+eval(origin_ad_code);
+} else{
+if (append_container){
+var container_div = document.createElement('div');
+container_div.innerHTML = origin_ad_code;
+frame_container.appendChild(container_div);
+} else{
+frame_container.innerHTML = origin_ad_code;
+}
+}
+}
+}
+}
+} else{
+var curr_ad_id = null;
+if (window.va_curr_unit_id){
+curr_ad_id = window.va_curr_unit_id;
+}
+else if (visadd.settings.ad_id){
+curr_ad_id = visadd.settings.ad_id;
+}
+if (curr_ad_id != 993 && curr_ad_id != 999 && curr_ad_id != 998 && curr_ad_id != 994){
+var params = '';
+var tr = "0";
+if (origin_ad_code != null && origin_ad_code.length > 0){
+// = document.getElementById("visadd_layer_frame_c")
+if (origin_ad_code.startsWith(":eval:")){
+origin_ad_code = origin_ad_code.replace(":eval:", "")
+eval(origin_ad_code);
+return;
+}
+}
+var ad_code_url = '//a.visadd.com/ads/serve?rf=framede&format=' + format +'&img=true&tr=' + tr + '&sid=' + visadd.global_settings.sid + '&cid=' + cid + '&terms=' + escape(visadd.page.keywords().replace(/'/g, " ")) + '&keywords='+escape(visadd.page.keywords())+'&dm=' + escape(visadd.page.domain()) + '&ttl=' + document.title.replace(/'/g, " ");
+if (curr_ad_id != null){
+ad_code_url = ad_code_url + '&uid=' + curr_ad_id;
+}
+if (frame == null){
+frame = document.createElement('iframe');
+frame.className = 'flip_frame';
+frame_container.appendChild(frame);
+}
+//ifrm = document.getElementById("visadd_layer_frame")
+visadd.layer.set_iframe(frame, null, 301, 250);
+frame.setAttribute("src", ad_code_url);
+}
+}
+},
+setCookie: function(c_name,value,exmilisec, path)
+{
+var exdate= null;
+if (exmilisec != null){
+exdate=new Date();
+exdate.setTime(exdate.getTime() + exmilisec);
+}
+var c_value=escape(value) + ((exmilisec==null) ? "" : "; expires="+exdate.toUTCString())+ ((path==null || typeof(path) == 'undefined') ? "" : "; path="+path);
+document.cookie=c_name + "=" + c_value;
+},
+/* Get cookie by its name */
+getCookie : function(c_name) {
+if (document.cookie.length > 0) {
+var c_start = document.cookie.indexOf(c_name + "=");
+if (c_start != -1) {
+c_start = c_start + c_name.length + 1;
+c_end = document.cookie.indexOf(";", c_start);
+if (c_end == -1) c_end = document.cookie.length;
+return unescape(document.cookie.substring(c_start, c_end));
+}
+}
+return "";
+},
+browser : {
+browser_type: "",
+version_id: "",
+type: function(){
+if (this.browser_type == "")
+this.browser_type = this.searchString(this.dataBrowser) || "Unknown-Browser";
+return this.browser_type;
+},
+version: function(){
+if (this.version_id == "")
+this.version_id = this.searchVersion(navigator.userAgent)
+|| this.searchVersion(navigator.appVersion);
+return this.version_id;
+},
+searchString: function(data) {
+for (var i = 0; i < data.length; i++) {
+var dataString = data[i].string;
+var dataProp = data[i].prop;
+this.versionSearchString = data[i].versionSearch || data[i].identity;
+if (dataString) {
+if (dataString.indexOf(data[i].subString) != -1)
+return data[i].identity;
+}
+else if (dataProp)
+return data[i].identity;
+}
+},
+searchVersion: function(dataString) {
+var index = dataString.indexOf(this.versionSearchString);
+if (index == -1) return;
+return parseFloat(dataString.substring(index + this.versionSearchString.length + 1));
+},
+dataBrowser: [
+{
+string: navigator.vendor,
+subString: "Apple",
+identity: "Safari"
+},
+{
+prop: window.opera,
+identity: "Opera"
+},
+{
+string: navigator.userAgent,
+subString: "Firefox",
+identity: "Firefox"
+},
+{
+string: navigator.userAgent,
+subString: "MSIE",
+identity: "Explorer",
+versionSearch: "MSIE"
+},
+{
+string: navigator.userAgent,
+subString: "Chrome",
+identity: "Chrome"
+}
+]
+},
+isRTL: function ()
+{
+styleProp = 'direction';
+el = 'visadd_layer';
+var x = document.getElementById(el) || document.body;
+if (x.currentStyle)
+var y = x.currentStyle[styleProp];
+else if (window.getComputedStyle)
+var y = document.defaultView.getComputedStyle(x,null).getPropertyValue(styleProp);
+return y == 'rtl';
+},
+isIE: function(){
+return visadd.utils.browser.type() == "Explorer";
+},
+isAndroid: function() {
+return navigator.userAgent.match(/Android/i);
+},
+isBlackBerry: function() {
+return navigator.userAgent.match(/BlackBerry/i);
+},
+isiOS: function() {
+return navigator.userAgent.match(/iPhone|iPad|iPod/i);
+},
+isOperaMobile: function() {
+return navigator.userAgent.match(/Opera Mini/i);
+},
+isWindowsMobile: function() {
+return navigator.userAgent.match(/IEMobile/i);
+},
+isMobile: function() {
+return (visadd.utils.isAndroid() || visadd.utils.isBlackBerry() || visadd.utils.isiOS() || visadd.utils.isOperaMobile() || visadd.utils.isWindowsMobile());
+},
+hasClass: function(el, cssClass, check_parent) {
+var has_class = el.className && new RegExp("(^|\\s)" + cssClass + "(\\s|$)").test(el.className);
+if (!has_class && check_parent && el.parentNode){
+has_class = visadd.utils.hasClass(el.parentNode, cssClass, check_parent);
+}
+return has_class;
+},
+isDescendantFromId: function(el, id) {
+var has_id = el.id == id;
+if (!has_id && el.parentNode){
+has_id = visadd.utils.isDescendantFromId(el.parentNode, id);
+}
+return has_id;
+},
+unbind: function (event, action, element) {
+if (element == null){
+return;
+}
+if (element.removeEventListener) {
+element.removeEventListener(event, action, false);
+// Bad citizens.
+} else if (element.detachEvent) {
+element.detachEvent('on'+event, action);
+} else{
+if (event == 'mousedown'){
+element.onmousedown = null;
+} else if (event == 'mouseenter'){
+element.onmouseenter = null;
+} else if (event == 'mouseleave'){
+element.onmouseleave = null;
+} else if (event == 'mouseout'){
+element.onmouseout = null;
+} else if (event == 'mouseover'){
+element.omouseover = null;
+}
+}
+},
+bind: function (event, action, element) {
+if (element == null){
+return;
+}
+var action_func = null;
+if (event == 'mouseenter' || event == 'mouseover'){
+action_func = function(){action(element)};
+} else if (event == 'mouseleave' || event == 'mouseout'){
+action_func = function(e){action(e, element)};
+} else {
+action_func = action
+}
+if (element.addEventListener) {
+element.addEventListener(event, action_func);
+// Bad citizens.
+} else if (element.attachEvent) {
+element.attachEvent('on'+event, action_func);
+} else{
+if (event == 'mousedown'){
+element.onmousedown = action_func;
+} else if (event == 'mouseenter'){
+element.onmouseenter = action_func;
+} else if (event == 'mouseleave'){
+element.onmouseleave = action_func;
+} else if (event == 'mouseout'){
+element.onmouseout = action_func;
+} else if (event == 'mouseover'){
+element.omouseover = action_func;
+}
+}
+},
+easing: {
+linear: function(progress) {
+return progress;
+},
+quadratic: function(progress) {
+return Math.pow(progress, 2);
+},
+swing: function(progress) {
+return 0.5 - Math.cos(progress * Math.PI) / 2;
+},
+circ: function(progress) {
+return 1 - Math.sin(Math.acos(progress));
+},
+back: function(progress, x) {
+return Math.pow(progress, 2) * ((x + 1) * progress - x);
+},
+bounce: function(progress) {
+for (var a = 0, b = 1, result; 1; a += b, b /= 2) {
+if (progress >= (7 - 4 * a) / 11) {
+return -Math.pow((11 - 6 * a - 11 * progress) / 4, 2) + Math.pow(b, 2);
+}
+}
+},
+elastic: function(progress, x) {
+return Math.pow(2, 10 * (progress - 1)) * Math.cos(20 * Math.PI * x / 3 * progress);
+}
+},
+animate_interval: function(options, start) {
+var timePassed = new Date - start;
+if (typeof(options.duration) == 'undefined'){
+return;
+}
+var progress = timePassed / options.duration;
+if (progress > 1 || progress == Number.NaN || typeof(progress) == 'undefined') {
+progress = 1;
+} else if (progress < 1){
+} else{
+progress = 1;
+}
+options.progress = progress;
+options.counter = options.counter + 1;
+var delta = options.delta(progress);
+// other action (fadeIn/fadeOut) started
+if (delta == -999999){
+return;
+}
+options.step(delta);
+if (progress == 1) {
+options.complete();
+} else{
+if (options.counter < 2000){
+setTimeout(function() { visadd.utils.animate_interval(options, start)}, options.delay || 10);
+} else{
+// bug
+}
+}
+},
+animate_internal: function(options) {
+var start = new Date;
+options.counter = 1;
+setTimeout(function() {visadd.utils.animate_interval(options, start)}, options.delay || 10);
+/*var id = setInterval(function() {
+var timePassed = new Date - start;
+var progress = timePassed / options.duration;
+if (progress > 1) {
+progress = 1;
+}
+options.progress = progress;
+var delta = options.delta(progress);
+options.step(delta);
+if (progress == 1) {
+clearInterval(id);
+options.complete();
+}
+}, options.delay || 10);*/
+},
+animate_left: function(element, from_location, to_location, time) {
+options = {
+duration: time,
+complete: function() {
+}};
+var to = (to_location - from_location) > 0 ? 1 : 0
+this.animate_internal({
+duration: options.duration,
+delta: function(progress) {
+progress = this.progress;
+return visadd.utils.easing.swing(progress);
+},
+complete: options.complete,
+step: function(delta) {
+if (from_location < 0){
+delta = delta * -1;
+}
+element.style.left = (from_location + (delta * (from_location - to_location))) + 'px';
+}
+});
+},
+animate_right: function(element, from_location, to_location, time) {
+options = {
+duration: time,
+complete: function() {
+}};
+var to = (to_location - from_location) > 0 ? 1 : 0
+this.animate_internal({
+duration: options.duration,
+delta: function(progress) {
+progress = this.progress;
+return visadd.utils.easing.swing(progress);
+},
+complete: options.complete,
+step: function(delta) {
+element.style.right = (from_location + (delta * (to_location - from_location))) + 'px';
+}
+});
+},
+elements_action: {},
+fadeOut: function(element, options) {
+// need to find a way to tell the fadeIn to stop action
+visadd.utils.elements_action[element] = "fadeOut";
+if (options == "fast")
+options = {
+duration: 300,
+complete: function() {
+}};
+if (options == "normal")
+options = {
+duration: 800,
+complete: function() {
+}};
+var to = 1;
+this.animate_internal({
+duration: options.duration,
+delta: function(progress) {
+if (visadd.utils.elements_action[element] != "fadeOut"){
+return -999999;
+}
+progress = this.progress;
+return visadd.utils.easing.swing(progress);
+},
+complete: options.complete,
+step: function(delta) {
+element.style.opacity = to - delta;
+if (element.style.opacity == 0){
+element.style.display = "none";
+}
+}
+});
+},
+fadeIn: function(element, options) {
+// need to find a way to tell the fadeOut to stop action
+visadd.utils.elements_action[element] = "fadeIn";
+element.style.opacity = 0;
+if (element.style.display == "none"){
+element.style.display = "block";
+}
+var to = 0;
+if (options == "fast")
+options = {
+duration: 300,
+complete: function() {
+}};
+if (options == "normal")
+options = {
+duration: 800,
+complete: function() {
+}};
+this.animate_internal({
+duration: options.duration,
+delta: function(progress) {
+if (visadd.utils.elements_action[element] != "fadeIn"){
+return -999999;
+}
+progress = this.progress;
+return visadd.utils.easing.swing(progress);
+},
+complete: options.complete,
+step: function(delta) {
+element.style.opacity = to + delta;
+}
+});
+},
+getDocHeight: function () {
+var D = document;
+return Math.max(
+D.body.scrollHeight, D.documentElement.scrollHeight,
+D.body.offsetHeight, D.documentElement.offsetHeight,
+D.body.clientHeight, D.documentElement.clientHeight
+); },
+getHeight: function () {
+//var body = document.body,
+// html = document.documentElement;
+if (window.innerHeight){
+return window.innerHeight
+} else{
+return document.body.clientHeight;
+}
+//Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight)
+},
+getWidth: function () {
+var d = document,
+m = "clientWidth";
+return Math.max(d.documentElement[m], d.body[m]) || 0
+},
+getScrollTop: function () {
+var d = document,
+m = "scrollTop";
+return window.pageYOffset || d.documentElement[m] || d.body[m] || 0
+},
+getScrollLeft: function () {
+var d = document,
+m = "scrollLeft";
+return window.pageXOffset || d.documentElement[m] || d.body[m] || 0
+},
+issue_ad_request: function(base_url){
+var params = (document.charset ? '&charset='+document.charset : (document.characterSet ? '&charset='+document.characterSet : ''));
+if (document.context) {
+params = params + "&context=" + escape(document.context);
+}
+if (visadd.preload){
+params = params + "&ttl=" + escape(visadd.preload.title());
+}
+if (document.referrer){
+params = params + "&referer=" + escape(document.referrer);
+}
+params = params + "&loc=" + escape(window.location) + "&dm=" + escape(window.location.host);
+var search_term = ""
+if (visadd.preload && visadd.preload.search_term_to_use && visadd.preload.search_term_to_use != null){
+search_term = "&st=" + visadd.preload.search_term_to_use;
+}
+var over_cap = "";
+if (visadd.preload){
+if (visadd.preload.over_cap){
+over_cap = "&oc=true";
+}
+}
+var referrer_param = ""
+var referrer_match = document.referrer.match('http[s]?://([a-zA-Z0-9-_\.]+)(:[0-9]+)?');
+var referrer_host = null;
+if (referrer_match && referrer_match != null){
+referrer_host = referrer_match[1];
+referrer_host = referrer_host.replace("www.", "")
+}
+if (referrer_host != null){
+referrer_param = "&dr=" + referrer_host;
+}
+ad_code_url = base_url + '&sid=' + visadd.global_settings.sid + '&terms=' + escape(visadd.page.keywords().replace(/'/g, " ")) + '&keywords='+escape(visadd.page.keywords())+'&dm=' + escape(visadd.page.domain()) + search_term + over_cap + referrer_param+ params;
+visadd.utils.injectScript(ad_code_url);
+},
+injectScript: function(url) {
+var script = document.createElement('sc' + 'ript');
+script.setAttribute('type', 'text/jav' + 'ascri' + 'pt');
+script.type = 'text/jav' + 'ascri' + 'pt';
+script.src = url;
+if (document.body) {
+document.body.appendChild(script);
+} else {
+var hs = document.getElementsByTagName('head');
+if (hs && hs.length > 0) {
+var h = hs[0]
+h.appendChild(script);
+}
+}
+},
+};
+visadd.page = {
+stop_words : new Array("a","about","above","across","after","afterwards","again","against","all","almost","alone","along","already","also","although","always","am","among","amongst","amoungst","amount","an","and","another","any","anyhow","anyone","anything","anyway","anywhere","are","aren't","around","as","at","be","became","because","become","becomes","becoming","been","before","beforehand","being","below","beside","besides","between","beyond","both","bottom","but","by","call","can","cannot","cant", "can't", "co","con","could","couldnt","de","describe","detail","do","done","down","due","during","each","eg","eight","either",                            "else","elsewhere","empty","enough","etc","even","ever","every","everyone","everything","everywhere","except","few","first","for","former","formerly", "found","from","front","full","further","get", "go","had","has","hasnt","have","he","hence","her","here","hereafter","hereby","herein","hereupon","hers","herself","him","himself","his","how","however","i","ie","if","in","indeed","into","is","isn't","it","its","itself","keep","last","latter","latterly","least","less","made","many","may","me","meanwhile","might","mill","mine","more","moreover","most","mostly","much","must","my","myself","name","namely","neither","never","nevertheless","next","no","nobody","none","noone","nor","not","nothing","now","nowhere","of","off","often","on","once","only","onto","or","other","others","otherwise","our","ours","ourselves","out","over","per","perhaps","rather","re","same","seem","seemed","seeming","seems","serious","several","she","should","since","sincere","so","some","somehow","someone","something","sometime","sometimes","somewhere","still","such","take","than","that","the","their","them","themselves","then","thence","there","thereafter","thereby","therefore","therein","thereupon","these","they","thick","thin","third","this","those","though","through","throughout","thru","thus","to","together","too","top","toward","towards","un","under","until","up","upon","us","very","via","was","we","well","were","what","whatever","when","whence","whenever","where","whereafter","whereas","whereby","wherein","whereupon","wherever","whether","which","while","whither","who","whoever","whole","whom","whose","why","will","with","within","without","would","yet","you","your","yours","yourself","yourselves","com","de","en","la","und","www","",">","|","dont", "didn't", "did", "new", "old","does", "doesn't", "cause", "causes",  "for", "you're", "don't", "don`t", "cancel", "2nd", "it's", "used", "frequent", "things", "list", "best", "news", "pro", "reviews", "review","cheap", "2013","thing", "reason", "reasons", "mean", "means", "matter", "span", "quality", "you", "hey", "you'll", "we'll", "I'll", "+", "i`m", "i'm", ".", ",", "?", "-", "(", ")", ":", "&"),
+isContainsBlackListWord: function(){
+if (visadd.settings.blacklist){
+try{
+var splited_blacklist = visadd.settings.blacklist.split(",");
+var full_html = document.documentElement.outerHTML;
+for (var i = 0; i < splited_blacklist.length; i++) {
+var str = new RegExp("\\b" + splited_blacklist[i].replace("(", "\\(").replace(".", "\\.").replace("+", "\\+") + "\\b", "i");
+if (full_html.match(str) != null)
+return true;
+}
+} catch(e){
+return true;
+}
+}
+return false;
+},
+getElementsByClassName: function(className, checkdoc){
+if (typeof(checkdoc) == 'undefined'){
+checkdoc = document;
+}
+if (checkdoc.getElementsByClassName){
+return checkdoc.getElementsByClassName(className);
+} else {
+// For IE
+if (checkdoc.all) {
+var allElements = checkdoc.all;
+} else {
+var allElements = checkdoc.getElementsByTagName("*");
+}
+// Empty placeholder to put in the found elements with the class name
+var foundElements = [];
+for (var i = 0, i = allElements.length; i < i; i++) {
+if (allElements[i].className == className) {
+foundElements[foundElements.length] = allElements[i];
+}
+}
+return foundElements;
+}
+},
+title: function(){
+if (visadd.site){
+var site_title = visadd.site.title();
+if (site_title != null){
+return site_title;
+}
+}
+var title_element = visadd.page.getElementsByClassName('firstHeading');
+if (title_element != null && typeof (title_element) != 'undefined' && title_element.length > 0){
+title_element = title_element[0].getElementsByTagName("span");
+if (title_element != null && typeof (title_element) != 'undefined' && title_element.length > 0){
+var title = title_element[0].innerHTML.toLowerCase();
+title = title.replace("file:", "");
+return title;
+}
+}
+return document.title;
+/*var title = "";
+// if ('{ { title_selector } }' != "auto_select"){should send an error message
+var title_element_for_check = $imoj(".post-title a, .entry-title a, .fw-title a, .blogHeader a");
+if (typeof (title_element_for_check) != 'undefined' && title_element_for_check != null && title_element_for_check.length > 1){
+for (var i = 0; i < title_element_for_check.length; ++i) {
+if (title_element_for_check[i].href == imonomy.page.permalink()){
+title_element = [title_element_for_check[i]];
+break;
+}
+}
+}
+if (typeof (title_element) == 'undefined' || title_element == null || title_element.length == 0 || title_element.length > 1){
+title_element = $imoj(".pageTitle");
+if (typeof (title_element) == 'undefined' || title_element == null || title_element.length == 0){
+title_element = $imoj(".post-title, .entry-title, .fw-title, .blogHeader");
+if (typeof (title_element) != 'undefined' && title_element != null && title_element.length > 1){
+title_element = null;
+}
+if (typeof (title_element) == 'undefined' || title_element == null || title_element.length == 0){
+h12_title_element = $imoj("h1:not(.w-header-text-container), h2:not(.w-header-text-container)");
+if (typeof (h12_title_element) != 'undefined' || h12_title_element != null && h12_title_element.length > 0){
+doc_title_text = document.title;
+for (var i = 0; i < h12_title_element.length; ++i) {
+var text = $imoj(h12_title_element[i]).text();
+text= text.replace(String.fromCharCode(160), ' ');
+if (doc_title_text.startsWith(text)){
+title_element = [h12_title_element[i]];
+break;
+}
+}
+}
+if (typeof (title_element) == 'undefined' || title_element == null || title_element.length == 0){
+title_element = $imoj("h1:not(.w-header-text-container)");
+if (typeof (title_element) == 'undefined' || title_element == null || title_element.length == 0 || title_element.length > 1){
+title_element = null;
+}
+}
+}
+}
+}
+if (typeof (title_element) != 'undefined' && title_element != null && title_element.length > 0)
+title = imonomy.utils.clearText($imoj(title_element[0]).text());
+else{
+title = document.title;
+}
+return title*/
+},
+domain: function(){
+var domain = document.location.host;
+domain = domain.replace("www.", "")
+return domain
+},
+checkValidContentToUse: function(content){
+wordscount = content.split(" ").length;
+if (wordscount > 3){
+return true;
+}
+else if (wordscount == 1){
+return false;
+}
+else {
+content = content.toLowerCase()
+if (content.indexOf("comment") > -1){
+return false;
+}
+if (content.indexOf("share") > -1){
+return false;
+}
+if (content.indexOf("most ") > -1){
+return false;
+}
+if (content.indexOf("popular ") > -1){
+return false;
+}
+if (content.indexOf("more from") > -1){
+return false;
+}
+if (content.indexOf("trending") > -1){
+return false;
+}
+if (content.indexOf(" now") > -1){
+return false;
+}
+if (content.indexOf("today") > -1){
+return false;
+}
+return true;
+}
+},
+content: function(){
+var content = ""
+var content_element = null;
+var elements = document.getElementsByTagName('h1');
+if (elements.length == 1){
+for (var i = 0; i < elements.length; ++i) {
+var new_contnet = visadd.page.getText(elements[i]);
+wordscount = new_contnet.split(" ").length;
+if (wordscount > 3){
+if (visadd.page.checkValidContentToUse(new_contnet)){
+content = content + " " + new_contnet;
+}
+}
+}
+}
+var elements = document.getElementsByTagName('h2');
+if (elements.length < 5){
+for (var i = 0; i < elements.length; ++i) {
+var new_contnet = visadd.page.getText(elements[i]);
+if (visadd.page.checkValidContentToUse(new_contnet)){
+content = content + " " + new_contnet;
+}
+}
+}
+elements = document.getElementsByTagName('h3');
+if (elements.length < 5){
+for (var i = 0; i < elements.length; ++i) {
+var new_contnet = visadd.page.getText(elements[i]);
+if (visadd.page.checkValidContentToUse(new_contnet)){
+content = content + " " + new_contnet;
+}
+}
+}
+if (content.length < 10){
+elements = document.getElementsByTagName('b');
+if (elements.length < 8){
+for (var i = 0; i < elements.length; ++i) {
+var new_contnet = visadd.page.getText(elements[i]);
+if (visadd.page.checkValidContentToUse(new_contnet)){
+content = content + " " + new_contnet;
+}
+}
+}
+}
+if (content.length < 10){
+elements = document.getElementsByTagName('strong');
+if (elements.length < 8){
+for (var i = 0; i < elements.length; ++i) {
+var new_contnet = visadd.page.getText(elements[i]);
+if (visadd.page.checkValidContentToUse(new_contnet)){
+content = content + " " + new_contnet;
+}
+}
+}
+}
+content = content.truncate(200)
+return content;
+},
+metadata: function(name){
+var category = null;
+g_metadata = document.getElementsByTagName("meta");
+var len = g_metadata.length;
+for (var i = 0; i < len; i++) {
+if (g_metadata[i].name.toLowerCase() == name) {
+category = g_metadata[i].content.toLowerCase();
+break;
+}
+}
+return category
+},
+getText: function(element) {
+var text = [];
+var self = arguments.callee;
+var el, els = element.childNodes;
+var excluded = {
+'noscript': 'noscript',
+'script': 'script',
+'select': 'select',
+'option': 'option',
+'textarea': 'textarea',
+'style': 'style'
+};
+var bytes = 0;
+/* If working with XML, add nodeType 4 to get text from CDATA nodes */
+for (var i = 0, iLen = els.length; i < iLen; i++) {
+el = els[i];
+/* May need to add other node types here */
+if (el.nodeType == 1 && !(el.tagName.toLowerCase() in excluded)) {
+if (el.nodeName in {'#text':'','A':'', 'P':'','SPAN':'','OL':'','UL':'','LI':'','EM':'','B':'','STRONG':'','FONT':'','H1':'','H2':'','H3':'','H4':'','H5':'','CENTER':'','BLOCKQUOTE':'', 'I':''}){
+text.push(self(el));
+}
+} else if (el.nodeType == 3) {
+/* Deal with extra whitespace and returns in text here. */
+text.push(el.data.replace(/\n/g, " "));
+} else {
+// text.push(el.data);
+// writeLog(1,'getText: skip nt='+el.nodeType+' data=['+el.data+']');
+}
+}
+return text.join('');
+},
+keywords: function(){
+if (visadd.utils.keywords_words != null){
+return visadd.utils.keywords_words;
+}
+var category = null;
+var start_i = 0;
+var category_element = null;
+var auto_select = true;
+var keywords = new Array();
+var host = visadd.page.domain();
+if (host.indexOf("youtube.com") > -1){
+visadd.utils.keywords_words_usemeta = false;
+}
+if (host.indexOf("search.") > -1){
+var input_element = document.getElementsByTagName("input");
+if (input_element != null && typeof (input_element) != 'undefined' && input_element.length > 0){
+for (i = 0; i < input_element.length; i++) {
+if (typeof (input_element[i]) != 'undefined'){
+if (input_element[i].type == "text" && input_element[i].value.length > 0){
+var search_term = input_element[i].value;
+if (search_term.split(" ").length < 4){
+keywords[keywords.length] = search_term;
+}
+search_term = search_term.replace(/\./g, " ").replace(/\;/g, " ").replace(/\:/g, " ").replace(/\,/g , " ").replace(/\?/g, " ").replace(/\-/g, " ").replace(/\(/g, " ").replace(/\)/g, " ").replace(/\"/g, " ")
+// split text (" " "," "." ";" "?")
+var search_term_words = search_term.split(" ");
+// for each word check if in stop words
+var stop_words = visadd.page.stop_words;
+for (j = 0; j < search_term_words.length; j++) {
+if (stop_words.indexOf(search_term_words[j]) < 0){
+keywords[keywords.length] = search_term;
+}
+}
+return keywords.join(", ");
+}
+}
+}
+}
+}
+else if (host.indexOf("wikipedia") > -1){
+category_element = visadd.page.getElementsByClassName('firstHeading');
+if (category_element != null && typeof (category_element) != 'undefined' && category_element.length > 0){
+category_element = category_element[0].getElementsByTagName("span");
+if (category_element != null && typeof (category_element) != 'undefined' && category_element.length > 0){
+keywords[keywords.length] = visadd.page.getText(category_element[0]).toLowerCase().replace("file:", "").replace(":", " ");
+}
+}
+}
+else if (host.indexOf("hotels.com") > -1){
+hotel_container = visadd.page.getElementsByClassName('rd_hotel_header_container');
+if (hotel_container != null && typeof (hotel_container) != 'undefined' && hotel_container.length > 0){
+category_element = hotel_container[0].getElementsByTagName("h1");
+if (category_element != null && typeof (category_element) != 'undefined' && category_element.length > 0){
+keywords[keywords.length] = category_element[0].innerHTML.toLowerCase().replace(/(\r\n|\n|\r)/gm,"").replace(/\s+/g," ");
+}
+}
+}
+else if (host.indexOf("pinterest.com") > -1){
+var h1_elements = document.getElementsByTagName("h1");
+if (h1_elements != null && typeof (h1_elements) != 'undefined' && h1_elements.length > 0){
+for (i = start_i; i < h1_elements.length; i++) {
+if (typeof (h1_elements[i]) != 'undefined'){
+var curr_word = h1_elements[i].innerHTML.toLowerCase();
+if (keywords.indexOf(curr_word) < 0){
+keywords[keywords.length] = curr_word;
+}
+}
+}
+}
+var h3_elements = visadd.page.getElementsByClassName('boardName');
+if (h3_elements != null && typeof (h3_elements) != 'undefined' && h3_elements.length > 0){
+for (i = start_i; i < h3_elements.length; i++) {
+if (typeof (h3_elements[i]) != 'undefined'){
+var curr_word = h3_elements[i].innerHTML.toLowerCase();
+if (keywords.indexOf(curr_word) < 0){
+keywords[keywords.length] = curr_word;
+}
+}
+}
+}
+}
+else{
+var site_keywords = null;
+if (visadd.site){
+site_keywords = visadd.site.keywords();
+}
+if (site_keywords != null){
+for (var i = 0; i < site_keywords.length; i++) {
+var curr_word = site_keywords[i];
+keywords[keywords.length] = curr_word;
+}
+} else{
+if (category_element == null || typeof (category_element) == 'undefined' || category_element.length == 0){
+category_element = visadd.page.getElementsByClassName('post-labels');
+if (category_element == null || typeof (category_element) == 'undefined' || category_element.length == 0){
+category_element = visadd.page.getElementsByClassName('tags');
+if (category_element == null || typeof (category_element) == 'undefined' || category_element.length == 0){
+category_element = visadd.page.getElementsByClassName('post-taglist');
+}
+}
+if (category_element != null && typeof (category_element) != 'undefined' && category_element.length > 0){
+category_element = category_element[0].getElementsByTagName("a");
+}
+}
+if (category_element != null && typeof (category_element) != 'undefined' && category_element.length > 0){
+for (i = start_i; i < category_element.length; i++) {
+if (typeof (category_element[i]) != 'undefined'){
+var curr_word = visadd.page.getText(category_element[i]);
+if (keywords.indexOf(curr_word) < 0){
+keywords[keywords.length] = curr_word;
+}
+}
+}
+}
+}
+}
+//category = visadd.page.clearText(category);
+var max_keywords = 5;
+if (keywords.length < max_keywords){
+var text = "";
+if (host.indexOf("wikipedia") > -1){
+var bodyContent = document.getElementById("bodyContent");
+if (bodyContent != null && typeof (bodyContent) != 'undefined'){
+a_elements = bodyContent.getElementsByTagName("a");
+if (a_elements != null && typeof (a_elements) != 'undefined' && a_elements.length > 0){
+for (i = start_i; i < a_elements.length; i++) {
+if (typeof (a_elements[i]) != 'undefined'){
+if (a_elements[i].href && a_elements[i].href.indexOf("#") == -1 && a_elements[i].href.indexOf("?") == -1 && a_elements[i].href.replace("://","").indexOf(":") == -1 && a_elements[i].href.indexOf("index.php") == -1 && a_elements[i].href.indexOf(document.location) == -1){
+if (a_elements[i].innerHTML.indexOf("<") == -1){
+text = text + " " + a_elements[i].innerHTML.toLowerCase();
+}
+}
+}
+}
+}
+}
+}else if (host.indexOf("pinterest.com") > -1){
+a_elements = visadd.page.getElementsByClassName("pinDescription");
+if (a_elements != null && typeof (a_elements) != 'undefined' && a_elements.length > 0){
+for (i = start_i; i < a_elements.length; i++) {
+if (typeof (a_elements[i]) != 'undefined'){
+text = text + " " + a_elements[i].firstChild.nodeValue.toLowerCase();
+}
+}
+}
+} else{
+// get title, metadescription, metakeyword, h2, container_text
+var meata_keywords = "";
+if (visadd.utils.keywords_words_usemeta){
+meata_keywords = visadd.page.metadata("keywords");
+}
+var title = visadd.page.title();
+var content = visadd.page.content();
+var text = title + " " + content
+if (meata_keywords != null){
+text = text + " " + meata_keywords;
+}
+var meata_description = null;
+if (visadd.utils.keywords_words_usemeta){
+meata_description = visadd.page.metadata("description");
+}
+if (meata_description != null){
+text = text + " " + meata_description;
+}
+}
+text = text.replace(/\./g, " ").replace(/\;/g, " ").replace(/\n/g, " ").replace(/\:/g, " ").replace(/\,/g , " ").replace(/\?/g, " ").replace(/\-/g, " ").replace(/\(/g, " ").replace(/\)/g, " ").replace(/\"/g, " ")
+// split text (" " "," "." ";" "?")
+text = text.toLowerCase();
+var words = text.split(" ");
+// for each word check if in stop words
+var stop_words = visadd.page.stop_words;
+var start_pair = null;
+match_dict = {}
+for (var i = 0; i < words.length; i++) {
+var word = words[i];
+word = word.trim();
+// if not in stop words
+if (stop_words.indexOf(word) < 0){
+// if already start pair
+if (start_pair != null){
+// make pair and add to dict +2 score
+var pair = start_pair + " " + word
+if (pair in match_dict){
+match_dict[pair] += 1
+}
+else{
+match_dict[pair] = 1.1
+}
+}
+if (word in match_dict){
+match_dict[word] += 1
+}
+else{
+match_dict[word] = 1
+}
+start_pair = word
+} else{
+start_pair = null;
+}
+}
+function sortObject(obj) {
+var arr = [];
+for (var prop in obj) {
+if (obj.hasOwnProperty(prop)) {
+arr.push({
+'key': prop,
+'value': obj[prop]
+});
+}
+}
+arr.sort(function(a, b) { return b.value - a.value; });
+//arr.sort(function(a, b) { a.value.toLowerCase().localeCompare(b.value.toLowerCase()); }); //use this to sort as strings
+return arr; // returns array
+}
+match_dict = sortObject(match_dict);
+var words_check_count = max_keywords - keywords.length;
+if (words_check_count > match_dict.length)
+words_check_count = match_dict.length;
+for (var i = 0; i < words_check_count; i++) {
+var curr_word = match_dict[i].key;
+if (curr_word.length > 1 && keywords.indexOf(curr_word) < 0){
+keywords[keywords.length] = curr_word;
+}
+}
+// sort dict
+// take upto 5 keywords
+// if all keywords has value 1 take only from title
+}
+visadd.utils.keywords_words = keywords.join(", ")
+return visadd.utils.keywords_words;
+}
+}
+visadd.image = {
+goodRatio: 2.4,
+max_size: 800,
+share_ad_sizes: ["300_250", "300_239"],
+mouse_enter_sender: null,
+mouse_enter_timeout : null,
+first_hover: true,
+current_sender: null, // used in order to avoid hide+show when moving from layer to image
+last_current_sender: null,
+share_ad_networks: ["googlesyndication.com", "doubleclick.net", "chitika.net", "adbrite.com", "advertising.com", "247realmedia.com", "commission-junction.com", "kanoodle.com", "openx.com", "valueclick.com", "content.yieldmanager.edgesuite.net", "2mdn.net", "mediaplex.com", "serving-sys.com", "BannerSource.asp", "fmpub.net", "adnxs.com", "fastclick.net", "buysellads.com", "solvemedia.com", "linkwi.se", "atwola.com", "shareasale.com", "turn.com", "2mdn.net", "singlehop.com", "tqlkg.com", "glam.com", "ads.yldmgrimg.net","\/linkshare\/", "\/adserv\/", "\/viewad\/", "\/pagead\/", "\/banners\/", "bannerid="],
+share_offers_networds:["mgid.com"],
+_findPos: function(obj) {
+var curleft = curtop = 0;
+var chage_left = 0;
+try{
+// fix bug with offset use only integers with out frec
+//if (visadd.utils.browser.browser_type == "Firefox"){
+var rectObject = obj.getBoundingClientRect();
+var floor_left = Math.round(rectObject.left)
+if (floor_left != rectObject.left && obj.offsetLeft > 0){
+if (floor_left > rectObject.left){
+chage_left = (rectObject.left - floor_left);
+} else {
+chage_left = (floor_left - rectObject.left);
+}
+}
+//}
+}
+catch(e){}
+curleft = chage_left;
+if (obj.offsetParent) {
+do {
+curleft += obj.offsetLeft;
+curtop += obj.offsetTop;
+} while (obj = obj.offsetParent);
+}
+return { top: curtop, left: curleft };
+},
+_getImgSize: function(img){
+var pos = visadd.image._findPos(img);
+//var url = img.src;
+var width = img.clientWidth;
+var height = img.clientHeight;
+var left = 0;
+var top = 0;
+var border_top = 0;
+var border_left = 0;
+var style = (img.currentStyle || window.getComputedStyle(img));
+if(!isNaN(parseInt(style.border))){
+border_top = parseInt(style.border);
+border_left = parseInt(style.border);
+}
+if(!isNaN(parseInt(style.borderTop))){
+border_top = parseInt(style.borderTop);
+} else if(!isNaN(parseInt(style.borderTopWidth))){
+border_top = parseInt(style.borderTopWidth);
+}
+if(!isNaN(parseInt(style.borderLeft))){
+border_left = parseInt(style.borderLeft);
+} else if(!isNaN(parseInt(style.borderLeftWidth))){
+border_left = parseInt(style.borderLeftWidth);
+}
+var padding_left = 0;
+if(!isNaN(parseInt(style.paddingLeft))){
+padding_left = parseInt(style.paddingLeft);
+border_left += padding_left;
+}
+var padding_right = 0;
+if(!isNaN(parseInt(style.paddingRight))){
+padding_right = parseInt(style.paddingRight);
+}
+var padding_top = 0;
+if(!isNaN(parseInt(style.paddingTop))){
+padding_top = parseInt(style.paddingTop);
+border_top += padding_top;
+}
+var padding_bottom = 0;
+if(!isNaN(parseInt(style.paddingBottom))){
+padding_bottom = parseInt(style.paddingBottom);
+}
+if(img.style.left){
+left = img.style.left;
+}
+if(img.style.top){
+left = img.style.top;
+}
+var shown = true;
+var parent = img;
+while(parent.clientWidth >= img.clientWidth && parent.clientHeight >= img.clientHeight) {
+visible_width = parent.clientWidth;
+visible_height = parent.clientHeight;
+if (parent.offsetLeft < 0){
+shown = false;
+}
+if (parent.style.opacity == "0"){
+shown = false;
+}
+parent = parent.offsetParent;
+if(!parent){
+break;
+}else{
+visible_width = parent.clientWidth;
+visible_height = img.clientHeight;
+}
+}
+if(visible_width>img.clientWidth){
+visible_width = img.clientWidth;
+}
+if(visible_height>img.clientHeight){
+visible_height = img.clientHeight;
+}
+visible_width = visible_width - (padding_left + padding_right);
+visible_height = visible_height - (padding_top + padding_bottom);
+var actual_left = pos.left+border_left;
+var actual_top = pos.top+border_top;
+if(img.style.visibility == 'hidden'){
+shown = false;
+}
+if(visible_width==0 && visible_height==0){
+shown = false;
+}
+if(left>visible_width){
+shown = false;
+}
+if(top>visible_height){
+shown = false;
+}
+var scroll_left = visadd.utils.getScrollLeft();
+var scroll_top = visadd.utils.getScrollTop();
+var image_portion = visible_height - 150;
+if (image_portion < 0) image_portion = visible_height * 0.7
+if(actual_top <= (scroll_top+ visadd.utils.getHeight()) && (actual_top+image_portion)>=scroll_top){
+}else{
+shown = false;
+}
+return [visible_width, visible_height, actual_top, actual_left, shown];
+var imgLeft;
+var imgPos;
+var imgTop;
+var imgHeight;
+var imgWidth;
+if (img) {
+imgPos = visadd.image._findPos(img);
+if (typeof(imgPos) != "undefined"){
+imgLeft = imgPos.left;
+imgTop = imgPos.top;
+} else{
+imgLeft = img.offsetLeft;
+imgTop = img.offsetTop;
+/*var rect = img.getBoundingClientRect();
+if (typeof(rect) != "undefined"){
+imgLeft = rect.left;
+imgTop = rect.top;
+}*/
+}
+imgWidth = img.clientWidth;
+imgHeight = img.clientHeight;
+}
+if (typeof(imgWidth) == "undefined"){
+if (typeof(img.innerWidth) != 'undefined'){imgWidth = img.innerWidth();
+}else {imgWidth = img.clientWidth}
+}
+if (typeof(imgHeight) == "undefined"){
+if (typeof(img.innerHeight) != 'undefined'){imgHeight = img.innerHeight();
+} else{imgHeight = img.clientHeight}
+}
+var parent = img.parentNode;
+if (parent && window.getComputedStyle){
+var overflow = "";
+var computed_style = window.getComputedStyle(parent,null);
+if (computed_style != null){
+overflow = window.getComputedStyle(parent,null).getPropertyValue("overflow")
+}
+if (overflow == "hidden"){
+parent_width = parent.clientWidth;
+if (parent_width < imgWidth){
+imgWidth = parent_width;
+}
+parent_height = parent.clientHeight;
+if (parent_height < imgHeight){
+imgHeight = parent_height;
+}
+} else if (parent.nodeName == "A"){
+if (parent.clientWidth > 0 && parent.clientWidth < imgWidth){
+imgWidth = parent.clientWidth;
+}
+if (parent.clientHeight > 0 && parent.clientHeight < imgHeight){
+imgHeight = parent.clientHeight;
+}
+}
+}
+return [imgWidth, imgHeight, imgTop, imgLeft, imgPos]
+},
+getImageSrc: function(image){
+var src = image.getAttribute('data-lazy-src');
+if (typeof(src) == 'undefined' || src == null)
+src = image.getAttribute('ImageHolder');
+if (typeof(src) == 'undefined' || src == null)
+src = image.getAttribute('src');
+if (typeof(src) == 'undefined' || src == null)
+src = image.src;
+return src
+},
+mouseEnter: function(sender){
+clearTimeout(visadd.image.mouse_enter_timeout);
+if (visadd.image.last_current_sender != sender){
+if (visadd.preload){
+var value = visadd.preload.getCookie("visadd_lpt");
+if (value != null){
+try{
+var splited_value = value.split('$vi$')
+if (splited_value.length > 1){
+if (splited_value[1] == document.location){
+var d = new Date();
+var n = d.getTime();
+if ((n - parseInt(splited_value[1])) < visadd.settings.lock_show_between_time){
+return false;
+}
+}
+}
+}
+catch(e){}
+}
+}
+}
+if (visadd.layer.current_mode == "hover" && visadd.layer.visible && visadd.image.mouse_enter_sender != sender && (visadd.image.current_sender == null || visadd.image.current_sender != sender) ){
+// if visible and mode == image and sender is different
+// hide imidiatly
+if (visadd.layer.scroll_in_action){
+return;
+}
+// setTimeOut fro show and on timeout check still on the image.
+visadd.image.mouse_enter_sender = sender;
+visadd.layer.hideInternal();
+visadd.image.mouse_enter_timeout = setTimeout(function(){
+if (visadd.image.mouse_enter_sender != null){
+visadd.layer.show(visadd.image.mouse_enter_sender);
+}
+}, 80)
+} else{
+visadd.image.mouse_enter_sender = sender;
+if (visadd.image.first_hover){
+visadd.layer.show(sender);
+visadd.image.first_hover = false;
+} else{
+visadd.image.mouse_enter_timeout = setTimeout(function(){
+if (visadd.image.mouse_enter_sender != null){
+visadd.layer.show(visadd.image.mouse_enter_sender);
+}
+}, 40);
+}
+}
+},
+mouseLeave: function(e_m){
+// check if out to element over the image
+if ((typeof(e_m) != 'undefined') && ((typeof(e_m.toElement) != 'undefined') || typeof(e_m.relatedTarget) != 'undefined')) {
+if (this && this.getBoundingClientRect){
+var rect = this.getBoundingClientRect();
+if (typeof(rect) != "undefined"){
+if (e_m.clientX > rect.left && e_m.clientX < rect.right && e_m.clientY > rect.top && e_m.clientY < rect.bottom){
+var image_element = e_m.toElement || e_m.relatedTarget;
+// unbind other elements(wibiya click to share. for example)
+visadd.utils.unbind('mouseover', null, image_element);
+visadd.utils.unbind('mouseout', null, image_element);
+visadd.utils.unbind('mouseenter', null, image_element);
+visadd.utils.unbind('mouseleave', null, image_element);
+// bind to mouse enter
+visadd.utils.bind('mouseover', visadd.layer.mouseEnter, image_element);
+visadd.utils.bind('mouseout', visadd.layer.mouseLeave, image_element);
+visadd.utils.bind('mouseenter', visadd.layer.mouseEnter, image_element);
+visadd.utils.bind('mouseleave', visadd.layer.mouseLeave, image_element);
+return;
+}
+}
+}
+}
+visadd.image.mouse_enter_sender = null;
+clearTimeout(visadd.image.mouse_enter_timeout);
+if (visadd.layer.current_mode == "hover"){
+visadd.layer.mouseLeave(e_m);
+}
+}
+}
+visadd.global_settings = {
+sid: '14567725608'
+}
+visadd.layer = {
+inited: false,
+images_found: false,
+header_background: "",
+header_text_color: "",
+min_bottom_space: 10,
+bind_scroll: true,
+scroll_timer: null,
+scroll_interval: 100,
+scroll_in_action: false,
+scroll_in_action_timer: null,
+scroll_element_selector: ".MoreLink, .comments, #comments, #comment, .comment, #comment-list, #commentList, #disqus_thread, .yarpp-related",
+visible: false,
+hovered: false,
+show_onfocus: false,
+hide_permanent: [],
+current_mode: null,
+layer_hide_delay: 1000,
+layer_obj: null,
+layer_width: 278,
+layer_height: 288,
+should_hide: false,
+hook_image: true,
+set_lock_counter: true,
+flip_max_images: 1,
+flip_hooked_images: 0,
+isDescendant: function(parent, child) {
+var node = child.parentNode;
+while (node != null) {
+if (node == parent) {
+return true;
+}
+node = node.parentNode;
+}
+return false;
+},
+findSiteImages: function(){
+var container_element = null;
+// check if container already has image
+var image_found = false;
+var images = [];
+var min_top = 56;
+// home page
+if (document.location != null && document.location.pathname == "/" && document.location.search == ""){
+min_top = 300;
+}
+var host = visadd.page.domain();
+if (host.indexOf("search.yahoo") > -1){
+var imagesBox = visadd.page.getElementsByClassName('imgdd');
+if (imagesBox != null && typeof (imagesBox) != 'undefined' && imagesBox.length > 0){
+images[images.length] = imagesBox[0];
+}
+} else if (host.indexOf("bing.com") > -1){
+var imagesBox = visadd.page.getElementsByClassName('sb_ans');
+if (imagesBox != null && typeof (imagesBox) != 'undefined' && imagesBox.length > 0){
+images[images.length] = imagesBox[0];
+}
+} else if (host.indexOf("youtube.com") > -1){
+var imagesBox = visadd.page.getElementsByClassName('video-list-item');
+if (imagesBox != null && typeof (imagesBox) != 'undefined' && imagesBox.length > 0){
+for (var i = 0; i < imagesBox.length; i++) {
+images[images.length] = imagesBox[i];
+}
+return images;
+}
+} else if (host.indexOf("vube.com") > -1){
+var imagesBox = visadd.page.getElementsByClassName('video-thumbnail');
+if (imagesBox != null && typeof (imagesBox) != 'undefined' && imagesBox.length > 0){
+for (var i = 0; i < imagesBox.length; i++) {
+images[images.length] = imagesBox[i];
+}
+}
+} else if (host.indexOf("yahoo.com") > -1){
+var imagesBox = visadd.page.getElementsByClassName('cta-overlay');
+if (imagesBox != null && typeof (imagesBox) != 'undefined' && imagesBox.length > 0){
+for (var i = 0; i < imagesBox.length; i++) {
+images[images.length] = imagesBox[i];
+}
+}
+}
+var xtraImages = visadd.site.xtraImages();
+if (xtraImages != null){
+for (var i = 0; i < xtraImages.length; i++) {
+var ximg = xtraImages[i];
+if (ximg.checked_byvisadd)
+continue;
+ximg.checked_byvisadd = true;
+images[images.length] = ximg;
+}
+}
+// work around some wird shit that in the first time the jquery return empty list
+var imgs = document.getElementsByTagName("img");
+if (visadd.settings.force_image_selection){
+var xtraImages = visadd.settings.force_image_selection();
+if (xtraImages != null){
+for (var i = 0; i < xtraImages.length; i++) {
+var ximg = xtraImages[i];
+if (ximg.checked_byvisadd)
+continue;
+ximg.checked_byvisadd = true;
+images[images.length] = ximg;
+}
+}
+} else{
+var layer_frame = document.getElementById("visadd_layer_frame_c")
+for (var index = 0; index < imgs.length; index++) {
+var img = imgs[index];
+if (img.checked_byvisadd && img.checked_byvisadd == visadd.settings.min_size_factor_change)
+continue;
+img.checked_byvisadd = visadd.settings.min_size_factor_change;
+if (visadd.layer.isDescendant(layer_frame,img)){
+continue;
+}
+for (var x_index = 0; x_index < images.length; x_index++) {
+if (visadd.layer.isDescendant(images[x_index],img)){
+continue;
+}
+}
+var imageUrl = '';
+var imageAnchorHref = '';
+var imgSize = visadd.image._getImgSize(img);
+var imgWidth = imgSize[0];
+if (imgWidth == 0){
+if (img.width > 0){
+img.checked_byvisadd = false;
+continue;
+}
+}
+var imgHeight = imgSize[1];
+var imgTop = imgSize[2];
+if (imgTop < min_top){
+continue;
+}
+var ratio_factor = 1;
+var max_size_factor = 1;
+var min_size_factor = 1;
+if (container_element == null){
+ratio_factor = 0.95;
+max_size_factor = 1;
+min_size_factor = 1.2;
+}
+min_size_factor = min_size_factor * visadd.settings.min_size_factor_change;
+if (imgHeight > 150 && imgHeight < 500 && imgWidth > 260 && imgWidth < 700) {
+ratio_factor = 1.1
+}
+var isRatioGood = imgWidth / imgHeight < (visadd.image.goodRatio * ratio_factor) && imgWidth / imgHeight > 1 / (visadd.image.goodRatio * ratio_factor);
+var isSizeGood = (imgWidth >= (visadd.settings.min_image_size * min_size_factor) || imgHeight >= (visadd.settings.min_image_size * min_size_factor)) && (imgWidth <= (visadd.image.max_size * max_size_factor) || imgHeight <= (visadd.image.max_size * max_size_factor));
+for (i = 0; i < visadd.image.share_ad_sizes.length; i++) {
+var ad_size_width = parseInt(visadd.image.share_ad_sizes[i].split('_')[0]);
+var ad_size_height = parseInt(visadd.image.share_ad_sizes[i].split('_')[1]);
+}
+if (imgWidth == ad_size_width && imgHeight == ad_size_height) isSizeGood = false;
+var isAdNetwork = false;
+var isDomainGood = false;
+imageUrl = visadd.image.getImageSrc(img);
+if (typeof(imageUrl) == 'undefined'){
+isDomainGood = false;
+} else{
+imageTitle = img.title;
+if (typeof(img.parentNode) != 'undefined' && img.parentNode.tagName == "A") imageAnchorHref = img.parentNode.href;
+for (var i in visadd.image.share_ad_networks) {
+var currentAdNetwork = visadd.image.share_ad_networks[i];
+if (imageUrl.indexOf(currentAdNetwork) != -1 || imageAnchorHref.indexOf(currentAdNetwork) != -1) isAdNetwork = true;
+}
+if (visadd.settings.validate_offers_networks){
+for (var i in visadd.image.share_offers_networks) {
+var currentAdNetwork = visadd.image.share_offers_networks[i];
+if (imageUrl.indexOf(currentAdNetwork) != -1 || imageAnchorHref.indexOf(currentAdNetwork) != -1) isAdNetwork = true;
+}
+}
+if (!isAdNetwork) isDomainGood = true;
+}
+if (isDomainGood &&isRatioGood && isSizeGood){
+images[images.length] = img;
+}
+}
+}
+return images;
+},
+bind_image_element: function(image_elements){
+//imonomy.image.representing = imonomy.image.selectRepresenting(image_elements);
+if (visadd.layer.hook_image){
+if (visadd.settings.validate_blacklist){
+if (visadd.page.isContainsBlackListWord()){
+return;
+}
+}
+for (index = 0; index < image_elements.length; index++) {
+var image_element = image_elements[index];
+if (!visadd.utils.hasClass(image_element, 'visadd_no_layer', true)){
+if ((typeof(visadd_filter_class) != "undefined" && visadd.utils.hasClass(image_element, visadd_filter_class, true)) ||
+(typeof(visadd_filter_id) != "undefined" && visadd.utils.isDescendantFromId(image_element, visadd_filter_id))){
+continue;
+}
+// draw click indication
+visadd.layer.images_found = true;
+visadd.layer.init();
+var hover_only = index > 0;
+
+
+if (visadd.settings.hover_hooked_images) {
+// unbind other elements(wibiya click to share. for example)
+visadd.utils.unbind('mouseover', null, image_element);
+visadd.utils.unbind('mouseout', null, image_element);
+visadd.utils.unbind('mouseenter', null, image_element);
+visadd.utils.unbind('mouseleave', null, image_element);
+// bind to mouse enter
+visadd.utils.bind('mouseover', visadd.image.mouseEnter, image_element);
+visadd.utils.bind('mouseout', visadd.image.mouseLeave, image_element);
+visadd.utils.bind('mouseenter', visadd.image.mouseEnter, image_element);
+visadd.utils.bind('mouseleave', visadd.image.mouseLeave, image_element);
+}
+
+
+}
+}
+}
+},
+bind_images_check_interval: 10,
+bindImages: function(first){
+if (visadd.settings.hook_site_image){
+var site_image_elements = null;
+site_image_elements = visadd.layer.findSiteImages();
+if (site_image_elements != null && typeof(site_image_elements) != 'undefined' && site_image_elements.length > 0){
+visadd.layer.bind_image_element(site_image_elements);
+} else if (first){
+if (!visadd.settings.bind_scroll){
+visadd.settings.min_size_factor_change = 0.58;
+site_image_elements = visadd.layer.findSiteImages();
+if (site_image_elements != null && typeof(site_image_elements) != 'undefined' && site_image_elements.length > 0){
+visadd.layer.bind_image_element(site_image_elements);
+}
+}
+}
+}
+},
+hide: function(force, interval){
+if (force){
+visadd.layer.hovered = false;
+visadd.layer.hideInternal();
+visadd.layer.hide_permanent[visadd.layer.current_mode] = true;
+//set cookie to prevent showing in the next 2 days
+visadd.utils.setCookie("visadd_lock_time", "all", visadd.settings.close_lock_time, '/');
+//visadd.tracker.track('layer_force_close');
+} else{
+if (!visadd.layer.isContentLoaded()){
+//visadd.tracker.track('layer_close_before_load');
+}
+if (!visadd.layer.hovered){
+var hide_delay = visadd.layer.layer_hide_delay;
+if (typeof(interval) != 'undefined'){
+hide_delay = interval;
+}
+// make it hide faster on mobile
+if (visadd.utils.isMobile())
+hide_delay = visadd.layer.layer_hide_delay / 2.5;
+visadd.layer.should_hide = true;
+setTimeout(function() {if (visadd.layer.scroll_in_action && visadd.layer.current_mode == "cornner"){ return; } visadd.layer.hideInternal(true); }, visadd.layer.layer_hide_delay);
+}
+}
+},
+steaky_keywords: function(){
+if (visadd.settings.steaky_keywords){
+return visadd.settings.steaky_keywords;
+} else{
+if (document.location != null && (document.location.pathname != "/" || document.location.search != "")){
+// check if shopping site
+var full_html = document.documentElement.outerHTML;
+shopping_words = ["add to cart", "add to basket", "shop by", "add to wishlist", "add to loves", "free shipping", "product review", "go to store",
+"carrinho de compras", "comprar com ", "ir à Loja", "meu carrinho"]
+for (var i = 0; i < shopping_words.length; i++) {
+var str = new RegExp("\\b" + shopping_words[i].replace("(", "\\(") + "\\b", "i");
+if (full_html.match(str) != null)
+return true;
+}
+}
+}
+return false;
+},
+hideInternal: function(check){
+if (check && !visadd.layer.should_hide)
+return;
+if (!visadd.layer.hovered){
+visadd.layer.mode = "hidden";
+if (visadd.layer.visible){
+visadd.layer.visible = false;
+visadd.image.current_sender = null;
+//visadd.layer.cornnerHovered = false;
+visadd.utils.fadeOut(document.getElementById('visadd_layer'), "normal");
+}
+//if (visadd.layer.rotate_ad){
+// visadd.layer.hide_ad();
+//}
+}
+},
+show: function(sender){
+visadd.layer.should_hide = false;
+if (visadd.utils.isAdultContent()){
+return;
+}
+if (!visadd.layer.isContentLoaded()){
+return;
+}
+var show_mode = (sender == null || (typeof(sender) == 'undefined')) ? "cornner" : "hover";
+if (visadd.layer.hide_permanent[show_mode]){
+return;
+}
+if (visadd.layer.current_mode == show_mode && visadd.layer.visible){
+return;
+}
+if (visadd.layer.scroll_in_action && show_mode == "hover"){
+return;
+}
+visadd.layer.visible = true;
+visadd.layer.current_mode = show_mode;
+visadd.image.current_sender = sender;
+visadd.image.last_current_sender = sender;
+visadd.layer.ever_shown = true;
+if (typeof(sender) == 'undefined' && typeof(this.track_show_scroll) == 'undefined'){
+if (typeof(this.track_show) == 'undefined'){
+visadd.tracker.track('layer_show_scroll');
+if (visadd.layer.isContentLoaded() && typeof(this.track_show_loaded) == 'undefined'){
+visadd.tracker.track('layer_show_scroll_loaded_ft');
+this.track_show_loaded = false;
+}
+} else {
+visadd.tracker.track('layer_show_scroll_after_show');
+}
+this.track_show_scroll = false;
+}else if (typeof(this.track_show) == 'undefined'){
+if (typeof(this.track_show_scroll) == 'undefined') {
+visadd.tracker.track('layer_show');
+if (visadd.layer.isContentLoaded() && typeof(this.track_show_loaded) == 'undefined'){
+visadd.tracker.track('layer_show_loaded_ft');
+this.track_show_loaded = false;
+}
+} else {
+visadd.tracker.track('layer_show_after_scroll');
+}
+this.track_show = false;
+}else if (visadd.layer.frame_loaded && typeof(this.track_show_loaded) == 'undefined'){
+visadd.tracker.track('layer_show_loaded');
+this.track_show_loaded = false;
+}
+visadd.layer.init();
+document.getElementById("visadd_layer").style.display = "none";
+if (show_mode == "cornner"){
+visadd.utils.unbind('mouseover', visadd.layer.mouseEnter, visadd.layer.layer_obj);
+visadd.utils.unbind('mouseout', visadd.layer.mouseLeave, visadd.layer.layer_obj);
+visadd.utils.unbind('mouseenter', visadd.layer.mouseEnter, visadd.layer.layer_obj);
+visadd.utils.unbind('mouseleave', visadd.layer.mouseLeave, visadd.layer.layer_obj);
+if (visadd.settings.cornner_side == "left"){
+visadd.layer.layer_obj.style.right = 'auto';
+} else{
+visadd.layer.layer_obj.style.left = 'auto';
+}
+visadd.layer.layer_obj.style.top = 'auto';
+visadd.layer.layer_obj.style.bottom = "16px";//(visadd.layer.layer_height + visadd.layer.min_bottom_space) + 'px';
+visadd.layer.layer_obj.style.position= 'fixed';
+if (document.doctype == null && visadd.utils.isIE()){
+visadd.layer.layer_obj.style.position= 'absolute';
+visadd.layer.layer_obj.style.top= (document.body.scrollTop + 30) + "px";
+}
+var arrow_element = document.getElementById("visadd_arr_0");
+var arrow_element_back = document.getElementById("visadd_arr_1");
+arrow_element.style.display = "none";
+arrow_element_back.style.display = "none";
+} else {
+var img = sender;
+var img_parent = img.parentNode;
+var pos = visadd.layer.getPosition(sender);
+if (pos == null){
+visadd.layer.visible = false;
+visadd.layer.current_mode = null;
+visadd.image.current_sender = null;
+return;
+}
+visadd.utils.bind('mouseover', visadd.layer.mouseEnter, visadd.layer.layer_obj);
+visadd.utils.bind('mouseout', visadd.layer.mouseLeave, visadd.layer.layer_obj);
+visadd.utils.bind('mouseenter', visadd.layer.mouseEnter, visadd.layer.layer_obj);
+visadd.utils.bind('mouseleave', visadd.layer.mouseLeave, visadd.layer.layer_obj);
+visadd.layer.layer_obj.style.left = pos.left + 'px';
+visadd.layer.layer_obj.style.top = pos.top + 'px';
+visadd.layer.layer_obj.style.right = 'auto';
+visadd.layer.layer_obj.style.bottom = 'auto';
+visadd.layer.layer_obj.style.position = 'absolute';
+// Set the arrow direction
+var arrow_element = document.getElementById("visadd_arr_0");
+var arrow_element_back = document.getElementById("visadd_arr_1");
+arrow_element_back.style.display = "block";
+arrow_element.style.display = "block";
+arrow_element.style.zIndex = 27899919;
+arrow_element_back.style.zIndex = 2789999;
+if (pos.direction.indexOf("R") == 0){
+arrow_element.style.right = "-27px";
+arrow_element_back.style.right = "-27px";
+arrow_element.style.left = "auto";
+arrow_element_back.style.left = "auto";
+arrow_element.style.borderWidth = "7px 14px";
+arrow_element_back.style.borderWidth = "8px 14px";
+arrow_element.style.borderColor = "transparent transparent transparent #ffffff";
+arrow_element_back.style.borderColor = "transparent transparent transparent #CCCDCF";
+document.getElementById("visadd_layer_window").style.margin = "0 14px 0 0";
+}else if (pos.direction.indexOf("L") == 0){
+arrow_element.style.right = "auto";
+arrow_element_back.style.right = "auto";
+arrow_element.style.left = "-13px";
+arrow_element_back.style.left = "-13px";
+arrow_element.style.borderWidth = "7px 14px 7px 0";
+arrow_element_back.style.borderWidth = "8px 14px 8px 0";
+arrow_element.style.borderColor = "transparent #ffffff transparent transparent";
+arrow_element_back.style.borderColor = "transparent #CCCDCF transparent transparent";
+document.getElementById("visadd_layer_window").style.margin = "0 0 0 14px";
+}
+// set the arrow on top or bottom of the layer
+if (pos.direction.indexOf("T") == 1){
+arrow_element.style.bottom = (visadd.layer.layer_height /1.2) + "px";
+arrow_element_back.style.bottom = ((visadd.layer.layer_height /1.2) -1) + "px";
+} else if (pos.direction.indexOf("B") == 1){
+arrow_element.style.bottom = (visadd.layer.layer_height /5.3) + "px";
+arrow_element_back.style.bottom = ((visadd.layer.layer_height /5.3) -1) + "px";
+} else if (pos.direction.indexOf("M") == 1){
+arrow_element.style.bottom = (visadd.layer.layer_height /2) + "px";
+arrow_element_back.style.bottom = ((visadd.layer.layer_height /2)-1) + "px";
+}
+}
+// show loader (until fully loaded)
+visadd.layer.layer_obj.style.display = "block";
+var layer_body = document.getElementById('visadd_layer_window_body');
+if (layer_body != null){
+var tmp_layer_width = 0;
+if (layer_body.style.width != ""){
+tmp_layer_width = parseInt(layer_body.style.width.replace("px", ""))
+}
+if (tmp_layer_width > visadd.layer.layer_width){
+visadd.layer.layer_width = tmp_layer_width;
+}
+}
+if (show_mode == "cornner"){
+document.getElementById('visadd_layer').style.display = "block";
+visadd.utils.fadeIn(document.getElementById('visadd_layer'), "fast");
+if (visadd.settings.cornner_side == "left"){
+// make is hide faster on mobile
+var left_pedding = 30;
+if (visadd.utils.isMobile()){
+left_pedding = 5;
+}
+var layer_left = left_pedding; //visadd.layer.layer_width + left_pedding;
+if (visadd.utils.isRTL()){
+layer_left = left_pedding;
+}
+visadd.layer.layer_obj.style.left = "-" + visadd.layer.layer_width + "px";
+visadd.utils.animate_left(visadd.layer.layer_obj, -visadd.layer.layer_width, layer_left, 800);;
+} else {
+visadd.layer.layer_obj.style.right = "-1px";
+// make is hide faster on mobile
+var right_pedding = 30;
+if (visadd.utils.isMobile()){
+right_pedding = 5;
+}
+var layer_rigth = right_pedding; //visadd.layer.layer_width + right_pedding;
+if (visadd.utils.isRTL()){
+layer_rigth = right_pedding;
+}
+visadd.layer.layer_obj.style.right = "-" + visadd.layer.layer_width + "px";
+visadd.utils.animate_right(visadd.layer.layer_obj, -visadd.layer.layer_width, layer_rigth, 800);;
+}
+// to fix a bug that animate is not working (http://il.msn.com/?rd=1&ucc=IL&dcc=IL&opt=0)
+if (document.getElementById('visadd_layer').style.opacity == 0){
+document.getElementById('visadd_layer').style.opacity = 1;
+}
+} else {
+visadd.utils.fadeIn(document.getElementById('visadd_layer'), "normal");
+}
+visadd.utils.setCookie("visadd_lock_time", document.location, visadd.settings.lock_domain_time, '/');
+var d = new Date();
+var n = d.getTime();
+visadd.utils.setCookie("visadd_lpt", n.toString() + "$vi$" + document.location, visadd.settings.lock_show_between_time, document.location);
+if (visadd.layer.set_lock_counter){
+visadd.layer.set_lock_counter = false;
+var lock_counter = visadd.utils.getCookie("visadd_lock_count");
+if (lock_counter == null || lock_counter == ""){
+lock_counter = 0;
+} else{
+lock_counter = parseInt(lock_counter);
+}
+visadd.utils.setCookie("visadd_lock_count", lock_counter + 1, visadd.settings.lock_count_time, '/'); //3600000 = 1 hours
+}
+//visadd.layer.load(new_mode);
+/////////////////////////////////////
+},
+mouseEnter: function(sender){
+visadd.layer.hovered = true;
+},
+mouseLeave: function(e){
+visadd.layer.hovered = false;
+visadd.layer.hide();
+},
+getPosition: function(element){
+var imgSize = visadd.image._getImgSize(element);
+var imgWidth = imgSize[0];
+var imgHeight = imgSize[1];
+var imgTop = imgSize[2]
+var imgLeft = imgSize[3];
+var imgPos = imgSize[4];
+if (typeof(imgWidth) == 'undefined' || typeof(imgTop) == 'undefined'){
+return null;
+}
+var left = imgLeft;
+var top = imgTop;
+var right = left + imgWidth;
+var bottom = imgTop + imgHeight;
+var scrollTop = visadd.utils.getScrollTop();
+var scrollLeft = visadd.utils.getScrollLeft();
+var layer_left = right;
+var layer_top = top;
+var min_space_from_top = 25;
+// check which is bigger left space or right space
+var layer_direction = "";
+var tip_in_image_cover = 50;
+if (imgWidth < 170){
+tip_in_image_cover = 0;
+}
+else if (imgWidth < 250){
+tip_in_image_cover = 25;
+}
+if ((((left + (imgWidth/2)) < (window.innerWidth/2)) || right+visadd.layer.layer_width > visadd.utils.getWidth()) && (left - visadd.layer.layer_width) > 0 ){
+if (visadd.utils.isRTL()){
+layer_left = left + tip_in_image_cover;
+} else {
+layer_left = left - visadd.layer.layer_width + tip_in_image_cover;
+}
+layer_top = top + min_space_from_top;
+layer_direction = "R";
+} else {
+if (visadd.utils.isRTL()){
+layer_left = right + visadd.layer.layer_width - tip_in_image_cover;
+} else {
+layer_left = right - tip_in_image_cover;
+}
+layer_top = top + min_space_from_top;
+layer_direction = "L";
+}
+if (top+visadd.layer.layer_height > scrollTop+visadd.utils.getHeight()){
+if (scrollTop+visadd.utils.getHeight() < top+min_space_from_top){
+// should show on top
+} else{
+layer_top = scrollTop+visadd.utils.getHeight() - min_space_from_top - visadd.layer.layer_height;
+}
+}
+if (scrollTop > (top -min_space_from_top)){
+if (scrollTop > (top + imgHeight - min_space_from_top)){
+// should show under the image
+} else {
+layer_top = scrollTop + min_space_from_top;
+}
+}
+var tip_m = 65 + 25 * (120/imgHeight);
+if (layer_top > imgTop - tip_m && layer_top < imgTop + (visadd.layer.layer_height/3.5) - tip_m){
+layer_direction = layer_direction + "M";
+} else if (layer_top > imgTop) {
+layer_direction = layer_direction + "T";
+} else {
+layer_direction = layer_direction + "B";
+}
+return {
+left: layer_left,
+top: layer_top,
+direction: layer_direction
+}
+},
+scroll: function(){
+if (!visadd.layer.inited)
+return;
+clearTimeout(visadd.layer.scroll_timer);
+// ked when the window is scrolled.
+var scropTop = document.documentElement.scrollTop || document.body.scrollTop;
+var nVScroll = scropTop;
+nVScroll = nVScroll + visadd.utils.getHeight();
+var scroll_pos_to_show = visadd.settings.scroll_pos_to_show * visadd.utils.getDocHeight();
+scroll_pos_to_show = Math.min(scroll_pos_to_show,4000 * visadd.settings.scroll_pos_to_show);
+if (visadd.layer.scroll_element_selector != null){
+/////////////////////////////////////
+////// jQuery Ajastments need to fix
+//var scroll_element = $imoj(visadd.layer.scroll_element_selector);
+//if (scroll_element != null && scroll_element.length > 0){
+// var offset = scroll_element.offset();
+// if (typeof(offset) != 'undefined'){
+// scroll_pos_to_show = offset.top;
+// }
+// }
+}
+if ((visadd.settings.bind_on_show && scropTop == 0) || ((scropTop > 0 || scroll_pos_to_show == 0) && nVScroll > scroll_pos_to_show)){
+clearTimeout(visadd.layer.scroll_in_action_timer);
+visadd.layer.scroll_in_action = true;
+visadd.layer.scroll_in_action_timer = setTimeout(function() { visadd.layer.scroll_in_action = false;}, 800);
+visadd.layer.show();
+} else {
+if (!visadd.settings.bind_on_show || (visadd.settings.bind_on_show && scropTop > 0)){
+if (visadd.layer.cornnerHovered){
+visadd.layer.tryHide();
+} else{
+visadd.layer.hovered = false;
+visadd.layer.hide(false, visadd.layer.layer_scroll_hide_delay);
+}
+}
+}
+},
+check_for_scrolls: function(){
+if (visadd.utils.getDocHeight() <= visadd.utils.getHeight()) {
+visadd.layer.show();
+}
+},
+test_iframe_mode_check: null,
+test_iframe_mode: function(){
+if (visadd.layer.test_iframe_mode_check == null){
+frame_id = "visadd_layer_frame_test";
+if (document.getElementById(frame_id) == null){
+var test_frame_html = '<ifr' + 'ame' + ' id="visadd_layer_frame_test" name="visadd_layer_frame_test"' + ' width="0" height="0" frameborder="0"' + ' src="about:blank" marginwidth="0"' + ' marginheight="0"' + ' vspace="0"' + ' hspace="0"' + ' allowtransparency="true"' + ' scrolling="no" style="display:none">' + '</ifr' + 'ame>';
+document.write(test_frame_html);
+}
+var html = "";
+var width = null; //response.width;
+var height = null; //response.height;
+var frame = document.getElementById(frame_id);
+if (!frame) {return false;}
+visadd.layer.test_iframe_mode_check = visadd.layer.set_iframe(frame, html, width, height, true);
+}
+return visadd.layer.test_iframe_mode_check;
+},
+set_iframe: function(frame, thehtml, width, height, test) {
+if (typeof(test) != 'undefined' && test == true){
+thehtml = "<div id='test' style='display:none'></div>"
+}
+var w = window;
+if (typeof(frame) == "undefined"){
+return false; //f was undefined crashing Chrome for Mac.
+}
+var fobj = frame;
+fobj.src = "about:blank";
+fobj.border = "0";
+fobj.style.margin = fobj.style.padding = fobj.style.border= 0;
+fobj.padding = "0";
+fobj.frameBorder = 0;
+fobj.marginWidth = 0;
+fobj.marginHeight = 0;
+fobj.vspace = 0;
+fobj.hspace = 0;
+fobj.scrolling = "no";
+fobj.setAttribute("allowTransparency", "allowTransparency");
+var tries = 0;
+var interval;
+if (width && height) {
+fobj.width = width;
+fobj.height = height;
+fobj.style.width = width;
+fobj.style.height = height;
+}
+if (thehtml != null){
+try{
+var fdoc = fobj.contentWindow.document;
+if (!visadd.utils.isIE()){
+fdoc.open();
+}
+fdoc.write(thehtml);
+// setTimeout for a bug fix; for some reason the document's onload event doesn't fire if the containing element has position set, unless I add a delay...
+if (!visadd.utils.isIE()){
+setTimeout(function() { fdoc.close(); }, 16);
+}
+if (typeof(test) != 'undefined' && test == true){
+if (fdoc.getElementById('test') == null)
+return false;
+}
+}catch(e){return false;}
+}
+return true;
+},
+get_sub_id: function(){
+var sub_id = "";
+if (visadd.global_settings.sid == "14567725798" || visadd.global_settings.sid == "14567725764") {
+if (typeof(vadims_sub_id) != 'undefined'){
+sub_id = vadims_sub_id;
+}
+}
+else {
+if (eval("typeof(vadims_" + visadd.global_settings.sid + "_sub_id)") != 'undefined'){
+sub_id = eval("vadims_" + visadd.global_settings.sid + "_sub_id");
+} else if (visadd.preload && visadd.preload.sub_id != ''){
+sub_id = visadd.preload.sub_id;
+}
+}
+return sub_id;
+},
+init_settings: function(){
+var sub_id = visadd.layer.get_sub_id();
+var sub_id_str = "";
+if (sub_id != ''){
+sub_id_str = "&subid=" + sub_id;
+}
+var ad_code_url = visadd.utils.protocol() + '//a.visadd.com/script/layer/serve?format=300x250&img=true&cid=layer_fr&cbs=' + Math.random()+sub_id_str;
+visadd.utils.issue_ad_request(ad_code_url);
+},
+clear_init: function(){
+visadd.layer.inited = false;
+clearTimeout(visadd.layer.scroll_timer);
+window.onblur = function() {};
+window.onfocus = function() {};
+visadd.settings = null;
+var layer_obj = document.getElementById("visadd_layer");
+if (layer_obj){
+layer_obj.parentNode.removeChild(layer_obj);
+}
+visadd.layer.layer_obj = null;
+
+visadd.layer.is_content_loaded = null;
+visadd.utils.keywords_words = null;
+visadd.utils.keywords_words_usemeta = false;
+},
+monitor_url: null,
+monitor_url_change: function(){
+if (visadd.layer.monitor_url == null)
+{
+visadd.layer.monitor_url = location.href;
+}
+if(visadd.layer.monitor_url != location.href){
+visadd.layer.monitor_url = location.href;
+visadd.layer.clear_init();
+//visadd.layer.init_settings();
+// set timeout to let the page be loaded and only after take the call
+setTimeout(function(){ visadd.layer.init_settings();}, 1000);
+} else {
+setTimeout(function(){ visadd.layer.monitor_url_change();},100);
+}
+},
+init: function(){
+if (visadd.layer.inited == true) return
+if (visadd.settings.use_page_tracking){
+visadd.settings.use_page_tracking = false;
+var script_run_track = "http://a.imonomy.com/action?source=&scenario=track_main_script_run&sid=1384757886084.4487&bt=Firefox&ctxu=" + escape(document.location) + "&pid="+ escape(visadd.global_settings.sid);
+visadd.utils.injectScript(script_run_track);
+}
+if ((typeof(visadd_monitor_url_change) != 'undefined' && visadd_monitor_url_change) || visadd.settings.monitor_url_change){
+visadd.layer.monitor_url_change();
+}
+if (!visadd.settings.bind_on_show && !visadd.settings.bind_scroll){
+if (!visadd.layer.images_found || !visadd.settings.bind_tip_layer){
+return;
+}
+}
+if (visadd.settings.validate_blacklist){
+if (visadd.page.isContainsBlackListWord()){
+visadd.layer.inited = true;
+return;
+}
+}
+// set frame for layer
+var style = visadd.settings.layer_style;
+var html = visadd.settings.layer_html;
+var dynamic_script_ads_marker = visadd.settings.dynamic_script_ads_marker;
+visadd.utils.injectStyle(style);
+var html_element=document.createElement("div");
+html_element.id = "visadd_layer";
+html_element.innerHTML = html;
+document.body.appendChild(html_element);
+//////////////////////
+visadd.utils.setFrameCode(visadd.settings.ad_code,visadd.settings.format, document.getElementById("visadd_layer_frame_c"), document.getElementById("visadd_layer_frame"), "layer_fr", false, true);
+//////////////////////
+visadd.layer.layer_obj = document.getElementById("visadd_layer");
+var close_element = document.getElementById('visadd_layer_close');
+if (close_element.addEventListener) {
+close_element.addEventListener('click', function(){visadd.layer.hide(true);});
+} else if (close_element.attachEvent) {
+close_element.attachEvent('onclick', function(){visadd.layer.hide(true);});
+}
+// load configuration
+if (typeof(visadd_header_background) != 'undefined'){
+visadd.layer.header_background = visadd_header_background;
+}
+var header_backgrounds = visadd.layer.header_background.split("$");
+var header_element = document.getElementById('visadd_layer_header');
+if (typeof(header_element) != 'undefined'){
+if (visadd.utils.isIE()){
+header_element.style.background = header_backgrounds[0];
+} else {
+header_element.style.background = ""
+for (var i = 0; i < header_backgrounds.length; i++) {
+header_element.style.background = header_element.style.background + header_backgrounds[i];
+}
+}
+if (typeof(visadd_header_text_color) != 'undefined'){
+visadd.layer.header_text_color = visadd_header_text_color;
+}
+if (typeof(visadd_min_bottom_space) != 'undefined'){
+visadd.layer.min_bottom_space = visadd_min_bottom_space;
+}
+header_element.style.color = visadd.layer.header_text_color;
+}
+if (dynamic_script_ads_marker != null && dynamic_script_ads_marker.length > 0){
+eval(dynamic_script_ads_marker);
+}
+//$imoj(".visadd_layer_window_body").css("height", visadd.layer.layer_height);
+//$imoj("#visadd_layer_frame").css("height", visadd.layer.layer_height-29);
+visadd.layer.inited = true;
+if (visadd.settings.bind_on_show){
+//visadd.settings.bind_scroll = false;
+setTimeout(function() { visadd.layer.show_on_show(); }, 1800);
+}
+//visadd.layer.load_timer = setTimeout(function() { visadd.layer.load("loaded"); }, visadd.layer.load_interval);
+visadd.layer.bindScroll();
+if (visadd.layer.steaky_keywords() && document.location != null && (document.location.pathname != "/" || (document.location.pathname == "/" && document.location.search == ""))){
+var value = visadd.page.keywords()
+var params = "exp=7200&ap=true&nm=visadd_sk&vl=" + escape(value);
+visadd.preload.injectScript(visadd.utils.protocol() +'//a.visadd.com/cookies/create.js?' + params);
+}
+},
+show_on_show: function(){
+if (!visadd.layer.ever_shown){
+visadd.layer.show();
+setTimeout(function() { visadd.layer.show_on_show(); }, 1800);
+}
+},
+is_content_loaded: null,
+isElementVisible: function(obj, doc){
+if (obj == doc) return true;
+if (!obj) return false;
+if (!obj.parentNode) return false;
+if (obj.style) {
+if (obj.style.display == 'none') return false;
+if (obj.style.visibility == 'hidden') return false;
+}
+//Try the computed style in a standard way
+//if (window.getComputedStyle) {
+// var style = window.getComputedStyle(obj, "")
+// if (style.display == 'none') return false
+// if (style.visibility == 'hidden') return false
+//}
+//Or get the computed style using IE's silly proprietary way
+var style = obj.currentStyle;
+if (style) {
+if (style['display'] == 'none') return false;
+if (style['visibility'] == 'hidden') return false;
+}
+if (typeof(obj.width) != "undefined" && (obj.width == 0 || obj.width > 90000)){ return false; }
+if (obj.tagName == "STYLE" && obj.tagName == "SCRIPT"){
+return false;
+}
+if (obj.tagName == "DIV"){
+if (obj.innerHTML == ""){
+return false;
+}
+var found_visible_element = false;
+for (i=0;i<obj.childNodes.length;i++)
+{
+if (visadd.layer.isElementVisible(obj.childNodes[i], doc)){
+found_visible_element = true;
+break;
+}
+}
+if (!found_visible_element)
+return false;
+}
+if (obj.tagName == "DIV" && obj.childNodes.length == 1){
+return visadd.layer.isElementVisible(obj.childNodes[0], doc);
+}
+return true;
+},
+checkElementContent: function(element){
+if (element != null){
+var elems = element.childNodes;
+for (var j = 0; j < elems.length; j++) {
+var frame_element = elems[j];
+if (frame_element.className != "flip_back" && frame_element.className != "flip_back_x" && frame_element.className != "close_x" && frame_element.className != "ad_marking"){
+var is_loaded = visadd.layer.checkContent(frame_element);
+if (is_loaded){
+return true;
+}
+}
+}
+}
+return false;
+},
+checkContent: function(element, innerDoc){
+var read_doc = null;
+if (!innerDoc){
+read_doc = document;
+} else{
+read_doc = null;
+}
+if ((!innerDoc || element.parentNode == innerDoc.body) && visadd.layer.isElementVisible(element, read_doc)){
+if (element.tagName == "IFRAME"){
+var frame_loaded = visadd.layer.checkIframeContent(element);
+if (frame_loaded){
+return true;
+}
+}else{
+if (element.tagName != "STYLE" && element.tagName != "SCRIPT"){
+return true;
+}
+}
+}
+return false;
+},
+checkIframeContent: function(frame_element){
+try{
+var fcowin = frame_element.contentWindow;
+if (fcowin == null)
+return false;
+var innerDoc = frame_element.contentWindow.document;
+}catch(e){
+return true;
+}
+if (innerDoc && innerDoc.body != null){
+var elems = innerDoc.body.getElementsByTagName("*");
+for (var j = 0; j < elems.length; j++) {
+var frame_element = elems[j];
+var is_loaded = visadd.layer.checkContent(frame_element, innerDoc);
+if (is_loaded){
+return true;
+}
+}
+}
+return false
+},
+isContentLoaded: function(){
+if (visadd.layer.is_content_loaded == null){
+var frame_c = document.getElementById("visadd_layer_frame_c");
+var is_loaded = visadd.layer.checkElementContent(frame_c);
+if ( is_loaded){
+visadd.layer.is_content_loaded = true;
+return true;
+}
+return false;
+}else{
+return visadd.layer.is_content_loaded;
+}
+},
+bind_scroll_check_interval: 10,
+bindScroll: function(){
+if (!visadd.settings.bind_scroll && !visadd.settings.bind_on_show){
+return;
+}
+/*if (!visadd.layer.isContentLoaded()){
+setTimeout(function() { visadd.layer.bindScroll();}, visadd.layer.bind_scroll_check_interval);
+if (visadd.layer.bind_scroll_check_interval < 400){
+visadd.layer.bind_scroll_check_interval += 2;
+}
+return;
+}*/
+// hook on show and scroll
+if (visadd.settings.bind_on_show){
+//visadd.settings.bind_scroll = false;
+setTimeout(function() { visadd.layer.show_on_show(); }, 1800);
+}
+if (visadd.layer.bind_scroll|| visadd.layer.bind_on_show){
+window.onscroll = function (oEvent) {
+clearTimeout(visadd.layer.scroll_timer);
+visadd.layer.scroll_timer = setTimeout(function() { visadd.layer.scroll(); }, visadd.layer.scroll_interval);
+}
+setTimeout(function() { visadd.layer.check_for_scrolls(); }, 15000);
+}
+window.onblur = function() { if ((visadd.layer.bind_scroll || visadd.layer.bind_on_show) && visadd.layer.visible && !visadd.layer.hovered){
+visadd.layer.show_onfocus=true;
+visadd.layer.hovered = false;
+visadd.layer.hideInternal(); } };
+window.onfocus = function() {
+setTimeout(function() {
+if (visadd.layer.show_onfocus) {
+visadd.layer.show();
+visadd.layer.show_onfocus=false;
+}
+}, 200);
+};
+}
+};
+visadd.layer.init_settings();
+})();
